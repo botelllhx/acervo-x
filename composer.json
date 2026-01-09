@@ -1,0 +1,14 @@
+{
+    "name": "botelho/acervox",
+    "description": "Framework moderno de acervos digitais para WordPress",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "AcervoX\\": "includes/"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    }
+}

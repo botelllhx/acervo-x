@@ -1,0 +1,62 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+class AcervoX_Admin {
+
+  public function __construct() {
+    add_action('admin_menu', [$this, 'menu']);
+    add_action('admin_enqueue_scripts', [$this, 'assets']);
+  }
+
+  public function menu() {
+    add_menu_page(
+      'AcervoX',
+      'AcervoX',
+      'manage_options',
+      'acervox',
+      [$this, 'render'],
+      'dashicons-archive',
+      25
+    );
+  }
+
+  public function render() {
+    echo '<div id="acervox-admin"></div>';
+  }
+
+  public function assets($hook) {
+    if ($hook !== 'toplevel_page_acervox') return;
+
+    wp_enqueue_style(
+      'acervox-admin',
+      ACERVOX_URL . 'admin/build/style.css',
+      [],
+      '0.1.0'
+    );
+
+    // Definir process antes de carregar o script React
+    wp_register_script(
+      'acervox-process-polyfill',
+      '',
+      [],
+      '0.1.0',
+      false
+    );
+    wp_add_inline_script('acervox-process-polyfill', 'if (typeof process === "undefined") { window.process = { env: { NODE_ENV: "production" } }; }');
+    wp_enqueue_script('acervox-process-polyfill');
+
+    wp_enqueue_script(
+      'acervox-admin',
+      ACERVOX_URL . 'admin/build/main.js',
+      ['acervox-process-polyfill', 'wp-api-fetch'],
+      '0.1.0',
+      true
+    );
+
+    wp_localize_script('acervox-admin', 'AcervoX', [
+      'api' => rest_url('acervox/v1'),
+      'nonce' => wp_create_nonce('wp_rest'),
+      'restUrl' => rest_url('wp/v2')
+    ]);
+  }
+}
