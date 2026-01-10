@@ -57,6 +57,46 @@ add_action('rest_api_init', function () {
         }
     ]);
 
+    // Endpoint para vincular item a coleção
+    register_rest_route('acervox/v1', '/items/(?P<id>\d+)/link-collection', [
+        'methods' => 'POST',
+        'callback' => 'acervox_api_link_item_to_collection',
+        'permission_callback' => function () {
+            return current_user_can('edit_posts');
+        },
+        'args' => [
+            'id' => [
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ],
+            'collection_id' => [
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param) || empty($param);
+                }
+            ]
+        ]
+    ]);
+
+    // Endpoint para desvincular item de coleção
+    register_rest_route('acervox/v1', '/items/(?P<id>\d+)/unlink-collection', [
+        'methods' => 'POST',
+        'callback' => 'acervox_api_unlink_item_from_collection',
+        'permission_callback' => function () {
+            return current_user_can('edit_posts');
+        },
+        'args' => [
+            'id' => [
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ]
+        ]
+    ]);
+
 });
 
 function acervox_api_get_items($request)
@@ -288,5 +328,69 @@ function acervox_import_tainacan($request) {
         'status' => 'ok',
         'collection_id' => $acervox_collection,
         'log' => $log
+    ];
+}
+
+function acervox_api_link_item_to_collection($request) {
+    $item_id = absint($request->get_param('id'));
+    $collection_id = $request->get_param('collection_id');
+    
+    // Verificar se o item existe
+    $item = get_post($item_id);
+    if (!$item || $item->post_type !== 'acervox_item') {
+        return new WP_Error('item_not_found', 'Item não encontrado', ['status' => 404]);
+    }
+    
+    // Se collection_id vazio ou 0, desvincular
+    if (empty($collection_id) || $collection_id == '0') {
+        delete_post_meta($item_id, '_acervox_collection');
+        return [
+            'success' => true,
+            'message' => 'Item desvinculado da coleção com sucesso',
+            'collection_id' => null
+        ];
+    }
+    
+    $collection_id = absint($collection_id);
+    
+    // Verificar se a coleção existe
+    $collection = get_post($collection_id);
+    if (!$collection || $collection->post_type !== 'acervox_collection') {
+        return new WP_Error('collection_not_found', 'Coleção não encontrada', ['status' => 404]);
+    }
+    
+    // Vincular item à coleção
+    $updated = update_post_meta($item_id, '_acervox_collection', $collection_id);
+    
+    if ($updated !== false) {
+        return [
+            'success' => true,
+            'message' => 'Item vinculado à coleção com sucesso',
+            'item_id' => $item_id,
+            'collection_id' => $collection_id,
+            'collection_title' => get_the_title($collection_id)
+        ];
+    } else {
+        return new WP_Error('update_failed', 'Falha ao vincular item à coleção', ['status' => 500]);
+    }
+}
+
+function acervox_api_unlink_item_from_collection($request) {
+    $item_id = absint($request->get_param('id'));
+    
+    // Verificar se o item existe
+    $item = get_post($item_id);
+    if (!$item || $item->post_type !== 'acervox_item') {
+        return new WP_Error('item_not_found', 'Item não encontrado', ['status' => 404]);
+    }
+    
+    // Desvincular item da coleção
+    $deleted = delete_post_meta($item_id, '_acervox_collection');
+    
+    return [
+        'success' => true,
+        'message' => 'Item desvinculado da coleção com sucesso',
+        'item_id' => $item_id,
+        'collection_id' => null
     ];
 }

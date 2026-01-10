@@ -38,19 +38,21 @@ add_shortcode('acervox', function ($atts) {
     $container_id = 'acervox-' . uniqid();
     
     $data_atts = [
-        'collection' => $atts['collection'] ? absint($atts['collection']) : null,
+        'collection' => !empty($atts['collection']) ? absint($atts['collection']) : null,
         'per_page' => absint($atts['per_page']),
         'layout' => sanitize_text_field($atts['layout']),
-        'filters' => $atts['filters'] === 'true',
-        'pagination' => $atts['pagination'] === 'true',
+        'filters' => $atts['filters'] === 'true' || $atts['filters'] === true,
+        'pagination' => $atts['pagination'] === 'true' || $atts['pagination'] === true,
         'columns' => absint($atts['columns']),
-        'show_excerpt' => $atts['show_excerpt'] === 'true',
-        'show_meta' => $atts['show_meta'] === 'true',
+        'show_excerpt' => $atts['show_excerpt'] === 'true' || $atts['show_excerpt'] === true,
+        'show_meta' => $atts['show_meta'] === 'true' || $atts['show_meta'] === true,
     ];
 
+    $json_config = json_encode($data_atts, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+
     return sprintf(
-        '<div id="%s" class="acervox-shortcode" data-config=\'%s\'></div>',
+        '<div id="%s" class="acervox-shortcode" data-config="%s"></div>',
         esc_attr($container_id),
-        esc_attr(json_encode($data_atts))
+        esc_attr($json_config)
     );
 });

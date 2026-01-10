@@ -6,17 +6,44 @@
 (function() {
   'use strict';
 
+  // Verificar se AcervoXFront está disponível
+  if (typeof AcervoXFront === 'undefined') {
+    console.error('AcervoX: AcervoXFront não está definido. Verifique se o script está sendo carregado corretamente.');
+    return;
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const containers = document.querySelectorAll('.acervox-shortcode');
+    if (containers.length === 0) {
+      console.warn('AcervoX: Nenhum container .acervox-shortcode encontrado.');
+      return;
+    }
     containers.forEach(container => {
-      new AcervoXFrontend(container);
+      try {
+        new AcervoXFrontend(container);
+      } catch (error) {
+        console.error('AcervoX: Erro ao inicializar container:', error, container);
+      }
     });
   });
 
   class AcervoXFrontend {
     constructor(container) {
       this.container = container;
-      this.config = JSON.parse(container.getAttribute('data-config') || '{}');
+      
+      // Parse seguro do data-config
+      let config = {};
+      try {
+        const configAttr = container.getAttribute('data-config');
+        if (configAttr) {
+          config = JSON.parse(configAttr);
+        }
+      } catch (error) {
+        console.error('AcervoX: Erro ao parsear data-config:', error);
+        config = {};
+      }
+      
+      this.config = config;
       this.currentPage = 1;
       this.items = [];
       this.loading = false;
@@ -35,21 +62,36 @@
     }
 
     async init() {
-      await this.loadCollections();
-      this.renderFilters();
-      this.loadItems();
-      this.setupEventListeners();
+      try {
+        await this.loadCollections();
+        this.renderFilters();
+        this.loadItems();
+        this.setupEventListeners();
+      } catch (error) {
+        console.error('AcervoX: Erro na inicialização:', error);
+        this.showError();
+      }
     }
 
     async loadCollections() {
       try {
+        if (!AcervoXFront || !AcervoXFront.api) {
+          console.error('AcervoX: AcervoXFront.api não está disponível');
+          return;
+        }
+        
         const response = await fetch(`${AcervoXFront.api}/collections`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
-        if (data.collections) {
+        if (data && data.collections) {
           this.collections = data.collections;
         }
       } catch (error) {
-        console.error('Erro ao carregar coleções:', error);
+        console.error('AcervoX: Erro ao carregar coleções:', error);
+        // Continuar mesmo sem coleções
+        this.collections = [];
       }
     }
 
@@ -184,6 +226,12 @@
     async loadItems() {
       if (this.loading) return;
       
+      if (!AcervoXFront || !AcervoXFront.api) {
+        console.error('AcervoX: AcervoXFront.api não está disponível');
+        this.showError();
+        return;
+      }
+      
       this.loading = true;
       this.showLoading();
 
@@ -203,20 +251,29 @@
           params.append('search', this.filters.search);
         }
 
-        const response = await fetch(`${AcervoXFront.api}/items?${params}`);
+        const apiUrl = `${AcervoXFront.api}/items?${params}`;
+        console.log('AcervoX: Carregando itens de:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('AcervoX: Dados recebidos:', data);
 
-        if (data.items) {
+        if (data && data.items) {
           this.items = data.items;
           this.renderItems();
-          if (this.config.pagination) {
+          if (this.config.pagination && data.pages) {
             this.renderPagination(data);
           }
         } else {
           this.showEmpty();
         }
       } catch (error) {
-        console.error('Erro ao carregar itens:', error);
+        console.error('AcervoX: Erro ao carregar itens:', error);
         this.showError();
       } finally {
         this.loading = false;
@@ -266,12 +323,14 @@
 
     renderItem(item) {
       const thumbnail = item.thumbnails?.large || item.thumbnails?.medium || item.thumbnail || '';
-      const excerpt = this.config.show_excerpt && item.excerpt ? `<p class="acervox-item-excerpt">${item.excerpt}</p>` : '';
+      const excerpt = this.config.show_excerpt && item.excerpt ? `<p class="acervox-item-excerpt">${this.escapeHtml(item.excerpt)}</p>` : '';
       
       let metaHTML = '';
       if (this.config.show_meta && item.meta) {
         const metaItems = Object.entries(item.meta).slice(0, 3).map(([key, meta]) => {
-          return `<div class="acervox-meta-item"><strong>${meta.label}:</strong> ${meta.value}</div>`;
+          const label = typeof meta === 'object' && meta !== null ? (meta.label || meta.name || key) : key;
+          const value = typeof meta === 'object' && meta !== null ? (meta.value || '') : meta;
+          return `<div class="acervox-meta-item"><strong>${this.escapeHtml(String(label))}:</strong> ${this.escapeHtml(String(value))}</div>`;
         }).join('');
         if (metaItems) {
           metaHTML = `<div class="acervox-item-meta">${metaItems}</div>`;
@@ -282,21 +341,22 @@
         <div class="acervox-item" data-item-id="${item.id}">
           <div class="acervox-item-image-wrapper">
             <img 
-              src="${thumbnail}" 
-              alt="${item.title}"
+              src="${this.escapeHtml(thumbnail)}" 
+              alt="${this.escapeHtml(item.title || '')}"
               class="acervox-item-image"
               loading="lazy"
-              data-full="${item.thumbnails?.full || thumbnail}"
+              data-full="${this.escapeHtml(item.thumbnails?.full || thumbnail)}"
+              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23f0f0f0\' width=\'400\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3ESem imagem%3C/text%3E%3C/svg%3E'"
             />
             <div class="acervox-item-overlay">
               <div class="acervox-item-overlay-content">
-                <h3>${item.title}</h3>
-                ${item.excerpt ? `<p>${item.excerpt.substring(0, 100)}...</p>` : ''}
+                <h3>${this.escapeHtml(item.title || '')}</h3>
+                ${item.excerpt ? `<p>${this.escapeHtml(item.excerpt.substring(0, 100))}...</p>` : ''}
               </div>
             </div>
           </div>
           <div class="acervox-item-content">
-            <h3 class="acervox-item-title">${item.title}</h3>
+            <h3 class="acervox-item-title">${this.escapeHtml(item.title || '')}</h3>
             ${excerpt}
             ${metaHTML}
             <button class="acervox-btn-view-details acervox-btn acervox-btn-outline" style="margin-top: 12px; width: 100%;">

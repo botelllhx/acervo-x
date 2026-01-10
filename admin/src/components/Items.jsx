@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { FileImage, Search, Filter, ChevronLeft, ChevronRight, Edit, Link2, Unlink } from 'lucide-react';
+import { FileImage, Search, Filter, ChevronLeft, ChevronRight, Edit, Link2, Unlink, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useToast } from './ui/Toast';
 
 export default function Items() {
   const [items, setItems] = useState([]);
@@ -18,6 +19,8 @@ export default function Items() {
   });
   const [collections, setCollections] = useState([]);
   const [linkingItem, setLinkingItem] = useState(null);
+  const [linkingLoading, setLinkingLoading] = useState(null);
+  const { showToast, ToastContainer } = useToast();
 
   useEffect(() => {
     fetch('/wp-json/acervox/v1/collections')
@@ -99,55 +102,77 @@ export default function Items() {
   };
 
   const handleLinkCollection = async (itemId, collectionId) => {
+    if (!collectionId || collectionId === '') {
+      showToast('Por favor, selecione uma coleção', 'warning');
+      return;
+    }
+
+    setLinkingLoading(itemId);
+
     try {
-      const response = await fetch(`/wp-json/wp/v2/acervox_item/${itemId}`, {
+      const response = await fetch(`/wp-json/acervox/v1/items/${itemId}/link-collection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-WP-Nonce': AcervoX?.nonce || ''
         },
         body: JSON.stringify({
-          meta: {
-            _acervox_collection: collectionId
-          }
+          collection_id: collectionId
         })
       });
 
-      if (response.ok) {
-        fetchItems(page, search, filters);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const collectionTitle = data.collection_title || collections.find(c => c.id == collectionId)?.title || 'coleção';
+        showToast(`Item vinculado à coleção "${collectionTitle}" com sucesso!`, 'success');
+        await fetchItems(page, search, filters);
         setLinkingItem(null);
+      } else {
+        const errorMessage = data.message || data.error?.message || 'Erro ao vincular item à coleção';
+        showToast(errorMessage, 'error');
       }
     } catch (error) {
       console.error('Erro ao atrelar coleção', error);
+      showToast('Erro ao vincular item à coleção. Tente novamente.', 'error');
+    } finally {
+      setLinkingLoading(null);
     }
   };
 
   const handleUnlinkCollection = async (itemId) => {
+    setLinkingLoading(itemId);
+
     try {
-      const response = await fetch(`/wp-json/wp/v2/acervox_item/${itemId}`, {
+      const response = await fetch(`/wp-json/acervox/v1/items/${itemId}/unlink-collection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-WP-Nonce': AcervoX?.nonce || ''
-        },
-        body: JSON.stringify({
-          meta: {
-            _acervox_collection: ''
-          }
-        })
+        }
       });
 
-      if (response.ok) {
-        fetchItems(page, search, filters);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showToast('Item desvinculado da coleção com sucesso!', 'success');
+        await fetchItems(page, search, filters);
         setLinkingItem(null);
+      } else {
+        const errorMessage = data.message || data.error?.message || 'Erro ao desvincular item da coleção';
+        showToast(errorMessage, 'error');
       }
     } catch (error) {
       console.error('Erro ao desatrelar coleção', error);
+      showToast('Erro ao desvincular item da coleção. Tente novamente.', 'error');
+    } finally {
+      setLinkingLoading(null);
     }
   };
 
   return (
     <>
+      <ToastContainer />
       <div className="acervox-header">
         <h1 className="acervox-header-title">Itens do Acervo</h1>
       </div>
@@ -262,49 +287,75 @@ export default function Items() {
                         {item.excerpt.substring(0, 80)}...
                       </p>
                     )}
-                    {item.collection_id && (
-                      <div style={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))', marginBottom: '12px' }}>
-                        Coleção: {collections.find(c => c.id == item.collection_id)?.title || 'N/A'}
-                      </div>
-                    )}
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      {item.collection_id ? (
+                        <span className="acervox-collection-badge">
+                          <CheckCircle2 size={12} />
+                          {collections.find(c => c.id == item.collection_id)?.title || 'Coleção desconhecida'}
+                        </span>
+                      ) : (
+                        <span className="acervox-collection-badge no-collection">
+                          Sem coleção
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
                       <Button variant="outline" size="sm" style={{ width: '100%' }} onClick={() => handleEdit(item.id)}>
                         <Edit size={14} />
                         Editar
                       </Button>
                       {linkingItem === item.id ? (
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexDirection: 'column' }}>
                           <Select
-                            style={{ flex: 1, fontSize: '13px', height: '32px', padding: '6px 12px' }}
+                            style={{ width: '100%', fontSize: '13px', height: '32px', padding: '6px 12px' }}
+                            value={item.collection_id ? String(item.collection_id) : ''}
                             onChange={(e) => {
-                              if (e.target.value) {
-                                handleLinkCollection(item.id, e.target.value);
+                              const selectedValue = e.target.value;
+                              if (selectedValue) {
+                                handleLinkCollection(item.id, selectedValue);
+                              } else {
+                                // Se selecionou "Selecione uma coleção...", desvincular
+                                handleUnlinkCollection(item.id);
                               }
                             }}
+                            disabled={linkingLoading === item.id}
                           >
                             <option value="">Selecione uma coleção...</option>
                             {collections.map(col => (
-                              <option key={col.id} value={col.id}>{col.title}</option>
+                              <option key={col.id} value={String(col.id)}>{col.title}</option>
                             ))}
                           </Select>
-                          {item.collection_id && (
+                          <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                            {item.collection_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUnlinkCollection(item.id)}
+                                disabled={linkingLoading === item.id}
+                                style={{ flex: 1, fontSize: '12px' }}
+                              >
+                                <Unlink size={12} />
+                                Desvincular
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
-                              size="icon"
-                              onClick={() => handleUnlinkCollection(item.id)}
-                              style={{ width: '32px', height: '32px' }}
+                              size="sm"
+                              onClick={() => {
+                                setLinkingItem(null);
+                                setLinkingLoading(null);
+                              }}
+                              disabled={linkingLoading === item.id}
+                              style={{ fontSize: '12px' }}
                             >
-                              <Unlink size={14} />
+                              Cancelar
                             </Button>
+                          </div>
+                          {linkingLoading === item.id && (
+                            <div style={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))', textAlign: 'center', width: '100%' }}>
+                              Salvando...
+                            </div>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setLinkingItem(null)}
-                            style={{ width: '32px', height: '32px' }}
-                          >
-                            ×
-                          </Button>
                         </div>
                       ) : (
                         <Button
