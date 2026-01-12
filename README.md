@@ -49,7 +49,7 @@ Ideal para museus, galerias, bibliotecas digitais, arquivos históricos e qualqu
 - Processamento em lotes para grandes volumes
 - Barra de progresso em tempo real
 - Histórico completo de importações
-- **Importação do Tainacan** (integração nativa)
+- **Importação de Sistemas Externos** (integração nativa)
 
 ### 🎯 Exibição Pública
 - **Shortcodes avançados** com múltiplos layouts
@@ -282,7 +282,7 @@ acervox/
 │   │   │   ├── Collections.jsx
 │   │   │   ├── Items.jsx
 │   │   │   ├── ImportCSV.jsx
-│   │   │   ├── ImportTainacan.jsx
+│   │   │   ├── ImportExternal.jsx
 │   │   │   ├── MetadataBuilder.jsx
 │   │   │   └── ui/            # Componentes UI reutilizáveis
 │   │   ├── lib/               # Utilitários
@@ -301,8 +301,8 @@ acervox/
 │   │   └── loader.php
 │   ├── importer/              # Sistema de importação
 │   │   ├── csv.php
-│   │   ├── tainacan.php
-│   │   ├── mapper.php
+│   │   ├── external.php
+│   │   ├── external-mapper.php
 │   │   ├── history.php
 │   │   └── logger.php
 │   ├── meta/                  # Sistema de metadados
@@ -393,14 +393,16 @@ O AcervoX suporta importação em massa via CSV com recursos avançados:
 - ✅ **Logs detalhados** de importação
 - ✅ **Histórico completo** de importações
 
-### Importação do Tainacan
+### Importação de Sistemas Externos
 
-Integração nativa com o plugin Tainacan:
+Integração nativa com sistemas externos de gestão de acervos:
 
-1. Acesse **AcervoX > Importar do Tainacan**
-2. Selecione a coleção do Tainacan
+1. Acesse **AcervoX > Importar > Sistema Externo**
+2. Selecione a coleção do sistema externo
 3. Configure o mapeamento de metadados
 4. Inicie a importação
+
+O AcervoX detecta automaticamente se o sistema externo está ativo e disponibiliza suas coleções para importação.
 
 ## 🎨 Personalização
 

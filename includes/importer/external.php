@@ -1,22 +1,22 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class AcervoX_Tainacan_Importer {
+class AcervoX_External_Importer {
 
-    public static function is_tainacan_active() {
+    public static function is_external_active() {
         return class_exists('\Tainacan\Repositories\Collections');
     }
 
     public static function get_collections() {
-        if (!self::is_tainacan_active()) return [];
+        if (!self::is_external_active()) return [];
 
         $repo = \Tainacan\Repositories\Collections::get_instance();
         return $repo->fetch(['posts_per_page' => -1]);
     }
     
     public static function import_items($collection_id, $acervox_collection_id) {
-        if (!self::is_tainacan_active()) {
-            AcervoX_Import_Logger::add("Erro: Tainacan não está ativo");
+        if (!self::is_external_active()) {
+            AcervoX_Import_Logger::add("Erro: Sistema externo não está ativo");
             return false;
         }
 
@@ -30,7 +30,7 @@ class AcervoX_Tainacan_Importer {
             $items = $items_repo->fetch(['collection_id' => $collection_id, 'posts_per_page' => -1]);
 
             if (empty($items)) {
-                AcervoX_Import_Logger::add("Nenhum item encontrado na coleção Tainacan");
+                AcervoX_Import_Logger::add("Nenhum item encontrado na coleção do sistema externo");
                 return true;
             }
 
@@ -95,4 +95,3 @@ class AcervoX_Tainacan_Importer {
     }
 
 }
-

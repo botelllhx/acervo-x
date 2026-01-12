@@ -127,17 +127,22 @@ export default function ImportCSV() {
           throw new Error(data.message || data.error || 'Erro na importação');
         }
 
-        // Calcular progresso baseado no offset + itens processados neste lote
-        const currentProcessed = (data.processed !== undefined) ? data.processed : (offset + (data.imported || 0));
+        // Calcular progresso - usar data.processed que já vem calculado do backend
+        const currentProcessed = data.processed !== undefined ? data.processed : (offset + (data.imported || 0));
         const totalRows = parseResult.total_rows;
         const percentage = totalRows > 0 ? Math.min(100, Math.round((currentProcessed / totalRows) * 100)) : 0;
 
-        // Atualizar progresso imediatamente
-        setProgress({
+        // Atualizar progresso imediatamente - criar novo objeto para forçar re-render
+        const newProgress = {
           processed: currentProcessed,
           total: totalRows,
           percentage: percentage
-        });
+        };
+        
+        // Debug (pode remover depois)
+        console.log('Progresso atualizado:', newProgress);
+        
+        setProgress(newProgress);
 
         if (data.log && data.log.length > 0) {
           setImportLog(prev => [...prev, ...data.log]);
@@ -155,11 +160,11 @@ export default function ImportCSV() {
           setCompleted(true);
           setImporting(false);
           // Garantir que o progresso está em 100%
-          setProgress({
+          setProgress(prev => ({
             processed: totalRows,
             total: totalRows,
             percentage: 100
-          });
+          }));
           
           const totalImported = currentProcessed;
           
@@ -355,14 +360,19 @@ export default function ImportCSV() {
                       height: '24px',
                       background: 'hsl(var(--muted))',
                       borderRadius: '12px',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      position: 'relative'
                     }}>
-                      <div style={{
-                        width: `${progress.percentage}%`,
-                        height: '100%',
-                        background: 'hsl(var(--primary))',
-                        transition: 'width 0.3s ease'
-                      }} />
+                      <div 
+                        key={`progress-${progress.processed}-${progress.percentage}`}
+                        style={{
+                          width: `${progress.percentage}%`,
+                          height: '100%',
+                          background: 'hsl(var(--primary))',
+                          transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                          minWidth: progress.percentage > 0 ? '2px' : '0'
+                        }} 
+                      />
                     </div>
                   </div>
                 </div>

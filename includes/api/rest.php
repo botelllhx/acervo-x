@@ -295,11 +295,11 @@ function acervox_api_get_collections($request) {
 }
 
 function acervox_api_get_external_collections($request) {
-    if (!class_exists('AcervoX_Tainacan_Importer')) {
+    if (!class_exists('AcervoX_External_Importer')) {
         return new WP_Error('class_not_found', 'Classe não encontrada', ['status' => 500]);
     }
 
-    if (!AcervoX_Tainacan_Importer::is_tainacan_active()) {
+    if (!AcervoX_External_Importer::is_external_active()) {
         return [
             'collections' => [],
             'active' => false,
@@ -307,7 +307,7 @@ function acervox_api_get_external_collections($request) {
         ];
     }
 
-    $collections = AcervoX_Tainacan_Importer::get_collections();
+    $collections = AcervoX_External_Importer::get_collections();
     $formatted = [];
 
     if (!empty($collections)) {
@@ -355,11 +355,11 @@ function acervox_api_save_shortcodes($request) {
 }
 
 function acervox_import_external($request) {
-    if (!class_exists('AcervoX_Tainacan_Importer')) {
-        return new WP_Error('class_not_found', 'Classe AcervoX_Tainacan_Importer não encontrada', ['status' => 500]);
+    if (!class_exists('AcervoX_External_Importer')) {
+        return new WP_Error('class_not_found', 'Classe AcervoX_External_Importer não encontrada', ['status' => 500]);
     }
 
-    if (!AcervoX_Tainacan_Importer::is_tainacan_active()) {
+    if (!AcervoX_External_Importer::is_external_active()) {
         return new WP_Error('external_not_active', 'Sistema externo não está ativo', ['status' => 400]);
     }
 
@@ -383,18 +383,18 @@ function acervox_import_external($request) {
         return $acervox_collection;
     }
 
-    if (!class_exists('AcervoX_Tainacan_Mapper') || !class_exists('AcervoX_Meta_Registry')) {
+    if (!class_exists('AcervoX_External_Mapper') || !class_exists('AcervoX_Meta_Registry')) {
         return new WP_Error('classes_not_found', 'Classes necessárias não encontradas', ['status' => 500]);
     }
 
-    $fields = AcervoX_Tainacan_Mapper::map_fields($collection_id);
+    $fields = AcervoX_External_Mapper::map_fields($collection_id);
     if (!empty($fields)) {
         AcervoX_Meta_Registry::save_fields($acervox_collection, $fields);
     }
 
     $start_time = current_time('mysql');
     
-    $import_result = AcervoX_Tainacan_Importer::import_items($collection_id, $acervox_collection);
+    $import_result = AcervoX_External_Importer::import_items($collection_id, $acervox_collection);
 
     $log = [];
     if (class_exists('AcervoX_Import_Logger')) {
@@ -663,6 +663,11 @@ function acervox_api_import_csv($request) {
     
     $importer = new AcervoX_CSV_Importer($session_data['file'], $session_data['collection_id']);
     $result = $importer->import($offset, $limit);
+    
+    // Garantir que processed seja o total processado até agora
+    if (!isset($result['processed']) || $result['processed'] < ($offset + $result['imported'])) {
+        $result['processed'] = $offset + $result['imported'];
+    }
     
     // Se terminou, limpar arquivo temporário e salvar no histórico
     if ($result['processed'] >= $session_data['total_rows']) {

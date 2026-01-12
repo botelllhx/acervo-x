@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class AcervoX_Tainacan_Mapper {
+class AcervoX_External_Mapper {
 
     public static function map_fields($collection_id) {
 

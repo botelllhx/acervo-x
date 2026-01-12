@@ -8,7 +8,7 @@ import Collections from './components/Collections';
 import Items from './components/Items';
 import MetadataBuilder from './components/MetadataBuilder';
 import Shortcodes from './components/Shortcodes';
-import ImportTainacan from './components/ImportTainacan';
+import ImportExternal from './components/ImportExternal';
 import ImportCSV from './components/ImportCSV';
 import ImportHistory from './components/ImportHistory';
 import Settings from './components/Settings';
@@ -39,7 +39,7 @@ function App() {
       case 'shortcodes':
         return <Shortcodes />;
       case 'import':
-        return <ImportTainacan />;
+        return <ImportExternal />;
       case 'import-csv':
         return <ImportCSV />;
       case 'import-history':

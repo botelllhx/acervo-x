@@ -5,7 +5,7 @@ import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { useToast } from './ToastProvider';
 
-export default function ImportTainacan() {
+export default function ImportExternal() {
   const [collections, setCollections] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState('');
   const [loading, setLoading] = useState(false);

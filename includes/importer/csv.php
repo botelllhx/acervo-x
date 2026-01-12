@@ -131,12 +131,14 @@ class AcervoX_CSV_Importer {
         
         fclose($handle);
         
-        $this->processed += $imported;
+        // Calcular total processado (offset + itens importados neste lote)
+        // Importante: offset já representa as linhas processadas anteriormente
+        $total_processed = $offset + $imported;
         
         return [
             'imported' => $imported,
             'errors' => $errors,
-            'processed' => $this->processed,
+            'processed' => $total_processed, // Total processado até agora (offset + importados neste lote)
             'total' => $this->total_rows,
             'log' => array_slice($this->log, -10), // Últimas 10 entradas
             'errors_list' => array_slice($this->errors, -10) // Últimos 10 erros
