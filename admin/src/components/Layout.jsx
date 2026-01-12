@@ -17,6 +17,22 @@ export default function Layout({ children, activeTab, onTabChange }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
 
+  // Listener para navegação via eventos (usado no Dashboard)
+  React.useEffect(() => {
+    const handleNavigate = (event) => {
+      if (event.detail && event.detail.tab) {
+        onTabChange(event.detail.tab);
+        // Se for import, abrir o submenu
+        if (event.detail.tab.startsWith('import')) {
+          setImportMenuOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener('acervox-navigate', handleNavigate);
+    return () => window.removeEventListener('acervox-navigate', handleNavigate);
+  }, [onTabChange]);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'collections', label: 'Coleções', icon: Archive },

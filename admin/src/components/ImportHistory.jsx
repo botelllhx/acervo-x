@@ -50,14 +50,27 @@ export default function ImportHistory() {
         'X-WP-Nonce': AcervoX?.nonce || ''
       }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Erro ao carregar histórico');
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.items) {
           setHistory(data.items);
           setTotalPages(data.pages || 1);
+        } else if (data.error) {
+          console.error('Erro na API:', data.error);
+          setHistory([]);
+        } else {
+          setHistory([]);
         }
       })
-      .catch(console.error)
+      .catch(error => {
+        console.error('Erro ao carregar histórico:', error);
+        setHistory([]);
+      })
       .finally(() => setLoading(false));
   };
 

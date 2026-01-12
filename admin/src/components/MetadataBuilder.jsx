@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Plus, Trash2, Save } from 'lucide-react';
+import { Database, Plus, Trash2, Save, Archive, FileImage, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -48,15 +48,28 @@ export default function MetadataBuilder() {
   }, [selectedCollection]);
 
   const addField = () => {
+    const newKey = 'field_' + Date.now(); // Gerar chave única temporária
     setFields([
       ...fields,
-      { label: '', key: '', type: 'text', required: false, options: [] }
+      { label: '', key: newKey, type: 'text', required: false, options: [] }
     ]);
   };
 
   const updateField = (index, updates) => {
     const newFields = [...fields];
-    newFields[index] = { ...newFields[index], ...updates };
+    const currentField = newFields[index] || {};
+    
+    // Se o label mudou e não há key ou key está vazia, gerar key automaticamente
+    if (updates.label && (!currentField.key || currentField.key === '')) {
+      const autoKey = updates.label.toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      updates.key = autoKey;
+    }
+    
+    newFields[index] = { ...currentField, ...updates };
     setFields(newFields);
   };
 
@@ -72,24 +85,41 @@ export default function MetadataBuilder() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/wp-json/wp/v2/acervox_collection/${selectedCollection}`, {
+      // Usar update_post_meta diretamente via API REST customizada
+      const response = await fetch(`/wp-json/acervox/v1/collections/${selectedCollection}/fields`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-WP-Nonce': AcervoX?.nonce || ''
         },
         body: JSON.stringify({
-          meta: {
-            _acervox_fields: JSON.stringify(fields)
-          }
+          fields: fields
         })
       });
 
-      if (response.ok) {
-        showToast('Metadados salvos com sucesso!', 'success');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showToast(`Metadados salvos com sucesso! ${data.saved_count || fields.length} campo(s) atualizado(s)`, 'success');
+        
+        // Usar os campos retornados pela API (já salvos no banco)
+        if (data.fields && Array.isArray(data.fields)) {
+          setFields(data.fields);
+        } else {
+          // Fallback: recarregar campos
+          const collectionsRes = await fetch('/wp-json/acervox/v1/collections');
+          const collectionsData = await collectionsRes.json();
+          if (collectionsData.collections) {
+            const collection = collectionsData.collections.find(col => col.id == selectedCollection);
+            if (collection && collection.fields) {
+              setFields(Array.isArray(collection.fields) ? collection.fields : []);
+            }
+          }
+        }
       } else {
-        const data = await response.json();
-        showToast(data.message || 'Erro ao salvar metadados', 'error');
+        const errorMsg = data.message || data.error || data.code || 'Erro ao salvar metadados';
+        console.error('Erro ao salvar campos:', data);
+        showToast(errorMsg, 'error');
       }
     } catch (error) {
       showToast('Erro ao salvar: ' + error.message, 'error');
@@ -127,28 +157,139 @@ export default function MetadataBuilder() {
 
         {selectedCollection && (
           <>
-            <Card style={{ marginBottom: '24px', background: 'hsl(var(--muted))', border: '1px solid hsl(var(--border))' }}>
+            <Card style={{ marginBottom: '24px' }}>
               <CardHeader>
-                <CardTitle style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'hsl(var(--muted-foreground))' }}>
-                  📌 Metadados Padrão (Obrigatórios)
+                <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px' }}>
+                  <Database size={18} />
+                  Metadados Padrão
                 </CardTitle>
                 <CardDescription>
-                  Estes campos são obrigatórios e não podem ser removidos
+                  Campos obrigatórios que estão sempre disponíveis para todos os itens desta coleção
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid hsl(var(--border))' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'hsl(var(--foreground))' }}>Coleção</strong>
-                    <span style={{ fontSize: '13px', color: 'hsl(var(--muted-foreground))' }}>A coleção à qual o item pertence</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  <div style={{ 
+                    padding: '16px', 
+                    background: 'hsl(var(--muted))', 
+                    borderRadius: '8px', 
+                    border: '1px solid hsl(var(--border))',
+                    transition: 'all 0.2s',
+                    cursor: 'default'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'hsl(var(--primary))';
+                    e.currentTarget.style.background = 'hsl(var(--primary) / 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'hsl(var(--border))';
+                    e.currentTarget.style.background = 'hsl(var(--muted))';
+                  }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '6px', 
+                        background: 'hsl(var(--primary))', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Archive size={16} style={{ color: 'white' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '2px' }}>
+                          Coleção
+                        </strong>
+                        <span style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))' }}>
+                          A coleção à qual o item pertence
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid hsl(var(--border))' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'hsl(var(--foreground))' }}>Título</strong>
-                    <span style={{ fontSize: '13px', color: 'hsl(var(--muted-foreground))' }}>O título do item (puxado automaticamente do título do post)</span>
+                  
+                  <div style={{ 
+                    padding: '16px', 
+                    background: 'hsl(var(--muted))', 
+                    borderRadius: '8px', 
+                    border: '1px solid hsl(var(--border))',
+                    transition: 'all 0.2s',
+                    cursor: 'default'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'hsl(var(--primary))';
+                    e.currentTarget.style.background = 'hsl(var(--primary) / 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'hsl(var(--border))';
+                    e.currentTarget.style.background = 'hsl(var(--muted))';
+                  }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '6px', 
+                        background: 'hsl(var(--primary))', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <FileImage size={16} style={{ color: 'white' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '2px' }}>
+                          Título
+                        </strong>
+                        <span style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))' }}>
+                          O título do item (puxado automaticamente do título do post)
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid hsl(var(--border))' }}>
-                    <strong style={{ display: 'block', marginBottom: '4px', color: 'hsl(var(--foreground))' }}>Descrição</strong>
-                    <span style={{ fontSize: '13px', color: 'hsl(var(--muted-foreground))' }}>Descrição do item</span>
+                  
+                  <div style={{ 
+                    padding: '16px', 
+                    background: 'hsl(var(--muted))', 
+                    borderRadius: '8px', 
+                    border: '1px solid hsl(var(--border))',
+                    transition: 'all 0.2s',
+                    cursor: 'default'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'hsl(var(--primary))';
+                    e.currentTarget.style.background = 'hsl(var(--primary) / 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'hsl(var(--border))';
+                    e.currentTarget.style.background = 'hsl(var(--muted))';
+                  }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '6px', 
+                        background: 'hsl(var(--primary))', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <FileText size={16} style={{ color: 'white' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'hsl(var(--foreground))', marginBottom: '2px' }}>
+                          Descrição
+                        </strong>
+                        <span style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))' }}>
+                          Descrição do item
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -199,11 +340,13 @@ export default function MetadataBuilder() {
                               <Input
                                 type="text"
                                 placeholder="Nome do campo"
-                                value={field.label}
-                                onChange={(e) => updateField(index, { 
-                                  label: e.target.value, 
-                                  key: field.key || e.target.value.toLowerCase().replace(/\s+/g, '_') 
-                                })}
+                                value={field.label || ''}
+                                onChange={(e) => {
+                                  const newLabel = e.target.value;
+                                  updateField(index, { 
+                                    label: newLabel
+                                  });
+                                }}
                               />
                             </div>
 

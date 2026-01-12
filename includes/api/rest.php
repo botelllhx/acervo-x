@@ -41,6 +41,23 @@ add_action('rest_api_init', function () {
         ]
     ]);
 
+    // Endpoint para salvar campos de metadados de uma coleção
+    register_rest_route('acervox/v1', '/collections/(?P<id>\d+)/fields', [
+        'methods' => 'POST',
+        'callback' => 'acervox_api_save_collection_fields',
+        'permission_callback' => function () {
+            return current_user_can('edit_posts');
+        },
+        'args' => [
+            'id' => [
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ]
+        ]
+    ]);
+
     register_rest_route('acervox/v1', '/shortcodes', [
         'methods' => 'GET',
         'callback' => 'acervox_api_get_shortcodes',
@@ -292,6 +309,81 @@ function acervox_api_get_collections($request) {
         'collections' => $collections,
         'total' => $query->found_posts,
     ];
+}
+
+function acervox_api_save_collection_fields($request) {
+    $collection_id = absint($request->get_param('id'));
+    $body = $request->get_json_params();
+    $fields = $body['fields'] ?? [];
+    
+    // Verificar se a coleção existe
+    $collection = get_post($collection_id);
+    if (!$collection || $collection->post_type !== 'acervox_collection') {
+        return new WP_Error('collection_not_found', 'Coleção não encontrada', ['status' => 404]);
+    }
+    
+    // Validar campos
+    if (!is_array($fields)) {
+        return new WP_Error('invalid_fields', 'Campos devem ser um array', ['status' => 400]);
+    }
+    
+    // Sanitizar campos
+    $sanitized_fields = [];
+    foreach ($fields as $field) {
+        // Pular campos sem label
+        if (empty($field['label'])) {
+            continue;
+        }
+        
+        // Gerar key se não existir
+        $key = !empty($field['key']) ? $field['key'] : sanitize_key(sanitize_title($field['label']));
+        $key = str_replace(['-', '_'], '', $key); // Remover hífens e underscores para consistência
+        
+        $sanitized_fields[] = [
+            'label' => sanitize_text_field($field['label']),
+            'key' => sanitize_key($key),
+            'type' => in_array($field['type'] ?? 'text', ['text', 'textarea', 'number', 'date', 'select']) 
+                ? $field['type'] 
+                : 'text',
+            'required' => !empty($field['required']),
+            'options' => isset($field['options']) && is_array($field['options']) 
+                ? array_map('sanitize_text_field', $field['options']) 
+                : []
+        ];
+    }
+    
+    // Salvar usando o registry
+    if (class_exists('AcervoX_Meta_Registry')) {
+        $saved = AcervoX_Meta_Registry::save_fields($collection_id, $sanitized_fields);
+        
+        if ($saved) {
+            // Aguardar um pouco para garantir que o banco processou
+            usleep(100000); // 0.1 segundo
+            
+            // Limpar cache do WordPress
+            clean_post_cache($collection_id);
+            wp_cache_delete($collection_id, 'post_meta');
+            
+            // Verificar se foi salvo corretamente - ler de volta do banco
+            $saved_fields = AcervoX_Meta_Registry::get_fields($collection_id);
+            
+            return [
+                'success' => true,
+                'message' => 'Campos salvos com sucesso',
+                'fields' => $saved_fields,
+                'saved_count' => count($saved_fields)
+            ];
+        } else {
+            // Tentar diagnosticar o problema
+            $raw_meta = get_post_meta($collection_id, '_acervox_fields', true);
+            return new WP_Error('save_failed', 'Falha ao salvar campos no banco de dados', ['status' => 500, 'debug' => [
+                'collection_id' => $collection_id,
+                'meta_exists' => !empty($raw_meta)
+            ]]);
+        }
+    }
+    
+    return new WP_Error('registry_not_found', 'Sistema de metadados não encontrado', ['status' => 500]);
 }
 
 function acervox_api_get_external_collections($request) {
@@ -784,7 +876,8 @@ function acervox_api_export_csv($request) {
 
 function acervox_api_get_import_history($request) {
     if (!class_exists('AcervoX_Import_History')) {
-        return new WP_Error('class_not_found', 'Classe não encontrada', ['status' => 500]);
+        // Tentar inicializar se não estiver inicializado
+        AcervoX_Import_History::init();
     }
     
     $args = [
@@ -797,7 +890,25 @@ function acervox_api_get_import_history($request) {
         'status' => sanitize_text_field($request->get_param('status'))
     ];
     
-    $result = AcervoX_Import_History::get_all($args);
+    // Remover valores vazios
+    $args = array_filter($args, function($value) {
+        return $value !== '' && $value !== null;
+    });
+    
+    // Remover valores vazios/null dos args
+    $clean_args = [];
+    foreach ($args as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $clean_args[$key] = $value;
+        }
+    }
+    
+    $result = AcervoX_Import_History::get_all($clean_args);
+    
+    // Garantir que items existe
+    if (!isset($result['items'])) {
+        $result['items'] = [];
+    }
     
     // Formatar dados
     foreach ($result['items'] as &$item) {

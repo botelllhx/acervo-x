@@ -169,7 +169,7 @@ body {
 .acervox-header {
   background: white;
   border-bottom: 1px solid hsl(var(--border));
-  padding: 0 32px;
+  padding: 0 32px 0 16px;
   height: 64px;
   display: flex;
   align-items: center;

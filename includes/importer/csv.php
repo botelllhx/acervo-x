@@ -204,6 +204,39 @@ class AcervoX_CSV_Importer {
             return new WP_Error('missing_title', 'Título não encontrado. Verifique se o CSV possui uma coluna de título (title, titulo, nome, etc.)');
         }
         
+        // Verificar se item já existe (duplicata) - buscar por título na mesma coleção
+        if ($this->collection_id) {
+            $existing_query = new WP_Query([
+                'post_type' => 'acervox_item',
+                'post_status' => 'any',
+                'posts_per_page' => 1,
+                's' => $title, // Busca por título
+                'meta_query' => [
+                    [
+                        'key' => '_acervox_collection',
+                        'value' => $this->collection_id,
+                        'compare' => '='
+                    ]
+                ]
+            ]);
+            
+            // Verificar se encontrou item com título exato
+            if ($existing_query->have_posts()) {
+                while ($existing_query->have_posts()) {
+                    $existing_query->the_post();
+                    $existing_title = get_the_title();
+                    // Comparação exata (case-insensitive)
+                    if (strcasecmp(trim($existing_title), trim($title)) === 0) {
+                        $existing_id = get_the_ID();
+                        wp_reset_postdata();
+                        $this->log[] = "Linha {$row_number}: Item já existe (ID: {$existing_id}) - pulando duplicata";
+                        return $existing_id; // Retornar ID existente sem criar novo
+                    }
+                }
+                wp_reset_postdata();
+            }
+        }
+        
         // Criar post
         $post_id = wp_insert_post([
             'post_type' => 'acervox_item',

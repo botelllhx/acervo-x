@@ -51,6 +51,18 @@ function App() {
     }
   };
 
+  // Listener para navegação via eventos (usado no Dashboard)
+  useEffect(() => {
+    const handleNavigate = (event) => {
+      if (event.detail && event.detail.tab) {
+        setActiveTab(event.detail.tab);
+      }
+    };
+
+    window.addEventListener('acervox-navigate', handleNavigate);
+    return () => window.removeEventListener('acervox-navigate', handleNavigate);
+  }, []);
+
   return (
     <ToastProvider>
       <div className="acervox-admin">

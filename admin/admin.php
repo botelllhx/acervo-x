@@ -10,7 +10,11 @@ class AcervoX_Admin {
 
   public function menu() {
     // Ícone SVG customizado para o AcervoX
-    $icon_svg = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/><path d="M2 4h20v16H2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>');
+    $icon_svg = 'data:image/svg+xml;base64,' . base64_encode(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6.225 4.811L4.811 6.225 10.586 12l-5.775 5.775 1.414 1.414L12 13.414l5.775 5.775 1.414-1.414L13.414 12l5.775-5.775-1.414-1.414L12 10.586z"/>
+      </svg>'
+    );
     
     add_menu_page(
       'AcervoX',
