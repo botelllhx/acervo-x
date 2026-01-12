@@ -68,8 +68,13 @@ export default function Collections() {
   const handleDelete = (id) => {
     const collection = collections.find(c => c.id === id);
     const collectionName = collection ? collection.title : 'esta coleção';
+    const itemsCount = collection ? collection.items_count || 0 : 0;
     
-    if (confirm(`Tem certeza que deseja excluir "${collectionName}"? Todos os itens vinculados serão mantidos, mas perderão a associação com a coleção.`)) {
+    const message = itemsCount > 0
+      ? `Tem certeza que deseja excluir "${collectionName}"?\n\nATENÇÃO: Esta ação irá excluir permanentemente ${itemsCount} ${itemsCount === 1 ? 'item' : 'itens'} vinculado${itemsCount === 1 ? '' : 's'} a esta coleção, incluindo todas as imagens e metadados.\n\nEsta ação não pode ser desfeita!`
+      : `Tem certeza que deseja excluir "${collectionName}"?`;
+    
+    if (confirm(message)) {
       fetch(`/wp-json/wp/v2/acervox_collection/${id}`, {
         method: 'DELETE',
         headers: {
@@ -78,10 +83,17 @@ export default function Collections() {
       })
         .then((response) => {
           if (response.ok) {
-            showToast(`Coleção "${collectionName}" excluída com sucesso`, 'success');
+            showToast(
+              `Coleção "${collectionName}" e ${itemsCount > 0 ? `${itemsCount} ${itemsCount === 1 ? 'item' : 'itens'} ` : ''}excluído${itemsCount === 1 ? '' : 's'} com sucesso`,
+              'success'
+            );
             loadCollections();
           } else {
-            showToast('Erro ao excluir coleção', 'error');
+            response.json().then(data => {
+              showToast(data.message || 'Erro ao excluir coleção', 'error');
+            }).catch(() => {
+              showToast('Erro ao excluir coleção', 'error');
+            });
           }
         })
         .catch((error) => {

@@ -12,6 +12,7 @@ export default function ImportCSV() {
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [parseResult, setParseResult] = useState(null);
+  const [result, setResult] = useState(null);
   const [progress, setProgress] = useState({ processed: 0, total: 0, percentage: 0 });
   const [importLog, setImportLog] = useState([]);
   const [errors, setErrors] = useState([]);
@@ -34,6 +35,7 @@ export default function ImportCSV() {
     if (selectedFile && selectedFile.type === 'text/csv') {
       setFile(selectedFile);
       setParseResult(null);
+      setResult(null);
       setProgress({ processed: 0, total: 0, percentage: 0 });
       setImportLog([]);
       setErrors([]);
@@ -101,6 +103,7 @@ export default function ImportCSV() {
 
     const batchSize = 10;
     let offset = 0;
+    let totalErrors = 0;
     const sessionKey = parseResult.session_key;
 
     const importBatch = async () => {
@@ -120,35 +123,58 @@ export default function ImportCSV() {
 
         const data = await response.json();
 
-        if (data.imported !== undefined) {
+        if (!response.ok) {
+          throw new Error(data.message || data.error || 'Erro na importação');
+        }
+
+        // Calcular progresso baseado no offset + itens processados neste lote
+        const currentProcessed = (data.processed !== undefined) ? data.processed : (offset + (data.imported || 0));
+        const totalRows = parseResult.total_rows;
+        const percentage = totalRows > 0 ? Math.min(100, Math.round((currentProcessed / totalRows) * 100)) : 0;
+
+        // Atualizar progresso imediatamente
+        setProgress({
+          processed: currentProcessed,
+          total: totalRows,
+          percentage: percentage
+        });
+
+        if (data.log && data.log.length > 0) {
+          setImportLog(prev => [...prev, ...data.log]);
+        }
+
+        if (data.errors_list && data.errors_list.length > 0) {
+          totalErrors += data.errors_list.length;
+          setErrors(prev => [...prev, ...data.errors_list]);
+        }
+
+        // Verificar se completou
+        const isCompleted = data.completed || currentProcessed >= totalRows;
+
+        if (isCompleted) {
+          setCompleted(true);
+          setImporting(false);
+          // Garantir que o progresso está em 100%
           setProgress({
-            processed: data.processed,
-            total: parseResult.total_rows,
-            percentage: Math.round((data.processed / parseResult.total_rows) * 100)
+            processed: totalRows,
+            total: totalRows,
+            percentage: 100
           });
-
-          if (data.log && data.log.length > 0) {
-            setImportLog(prev => [...prev, ...data.log]);
-          }
-
-          if (data.errors_list && data.errors_list.length > 0) {
-            setErrors(prev => [...prev, ...data.errors_list]);
-          }
-
-          if (data.completed) {
-            setCompleted(true);
-            setImporting(false);
-            showToast(
-              `Importação concluída! ${data.processed} itens importados com sucesso${data.errors > 0 ? ` (${data.errors} erros)` : ''}`,
-              data.errors > 0 ? 'warning' : 'success',
-              5000
-            );
-          } else {
-            offset += batchSize;
-            setTimeout(importBatch, 500); // Pequeno delay entre lotes
-          }
+          
+          const totalImported = currentProcessed;
+          
+          showToast(
+            `Importação concluída! ${totalImported} itens processados${totalErrors > 0 ? ` (${totalErrors} erros)` : ''}`,
+            totalErrors > 0 ? 'warning' : 'success',
+            5000
+          );
         } else {
-          throw new Error(data.message || 'Erro na importação');
+          // Continuar importação
+          offset += batchSize;
+          // Usar requestAnimationFrame para melhor performance
+          requestAnimationFrame(() => {
+            setTimeout(importBatch, 300);
+          });
         }
       } catch (error) {
         showToast('Erro na importação: ' + error.message, 'error', 5000);
