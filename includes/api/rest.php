@@ -677,13 +677,18 @@ function acervox_api_import_csv($request) {
         
         // Salvar no histórico
         if (class_exists('AcervoX_Import_History')) {
+            // Calcular corretamente os itens importados e falhados
+            $total_imported = $result['processed'];
+            $total_errors = isset($result['errors']) ? $result['errors'] : 0;
+            
             AcervoX_Import_History::add([
                 'import_type' => 'csv',
                 'collection_id' => $session_data['collection_id'],
                 'total_items' => $session_data['total_rows'],
-                'imported_items' => $result['processed'] - $result['errors'],
-                'failed_items' => $result['errors'],
-                'status' => $result['errors'] > 0 ? 'completed' : 'completed',
+                'imported_items' => max(0, $total_imported - $total_errors),
+                'failed_items' => $total_errors,
+                'status' => ($total_errors > 0 && $total_errors >= $total_imported) ? 'failed' : 'completed',
+                'started_at' => current_time('mysql'), // Usar started_at também
                 'completed_at' => current_time('mysql'),
                 'log_data' => array_merge($result['log'] ?? [], $result['errors_list'] ?? [])
             ]);

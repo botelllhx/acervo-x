@@ -60,11 +60,12 @@ class AcervoX_CSV_Importer {
         
         fclose($handle);
         
-        // Criar campos automaticamente se não existirem
+        // Criar campos automaticamente se não existirem ou se houver novos campos
         if ($this->collection_id && class_exists('AcervoX_Meta_Registry')) {
             $existing_fields = AcervoX_Meta_Registry::get_fields($this->collection_id);
-            if (empty($existing_fields) && !empty($this->headers) && $sample_data) {
-                $this->auto_create_fields_from_csv($sample_data);
+            if (!empty($this->headers) && $sample_data) {
+                // Sempre atualizar campos para garantir que todos os campos do CSV sejam mapeados
+                $this->auto_create_fields_from_csv($sample_data, $existing_fields);
             }
         }
         
@@ -103,6 +104,22 @@ class AcervoX_CSV_Importer {
         $imported = 0;
         $errors = 0;
         $current_row = $offset + 1;
+        
+        // Garantir que os campos de metadados existam antes de importar
+        if ($this->collection_id && class_exists('AcervoX_Meta_Registry') && !empty($this->headers)) {
+            $existing_fields = AcervoX_Meta_Registry::get_fields($this->collection_id);
+            if (empty($existing_fields)) {
+                // Ler primeira linha para criar campos
+                $first_row_pos = ftell($handle);
+                $first_row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure);
+                if ($first_row && count($first_row) === count($headers)) {
+                    $sample_data = array_combine($headers, $first_row);
+                    $this->auto_create_fields_from_csv($sample_data, $existing_fields);
+                }
+                // Voltar para a posição original
+                fseek($handle, $first_row_pos);
+            }
+        }
         
         // Processar linhas
         while (($row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure)) !== false && $imported < $limit) {
@@ -216,22 +233,19 @@ class AcervoX_CSV_Importer {
         if ($this->collection_id && class_exists('AcervoX_Meta_Registry')) {
             $fields = AcervoX_Meta_Registry::get_fields($this->collection_id);
             
-            // Campos a ignorar (já processados ou especiais)
+            // Campos a ignorar (apenas campos especiais do sistema, não campos de conteúdo)
             $ignore_fields = [
-                'title', 'titulo', 'nome', 'name', 'description', 'descricao', 
-                'excerpt', 'resumo', 'content', 'conteudo',
-                'image', 'imagem', 'thumbnail', 'special_thumbnail', 'url',
                 'special_item_id', 'special_item_status', 'special_document',
-                'special_attachments', 'special_comment_status', 'special_item_author',
-                'special_item_slug', 'creation_date', 'user_last_modified',
-                'modification_date', 'public_url', 'coleção', 'collection'
+                'special_thumbnail', 'special_attachments', 'special_comment_status',
+                'special_item_author', 'special_item_slug', 'creation_date',
+                'user_last_modified', 'modification_date', 'public_url'
             ];
             
             foreach ($fields as $field) {
                 $key = $field['key'] ?? '';
                 $label = strtolower($field['label'] ?? '');
                 
-                // Pular campos ignorados
+                // Pular apenas campos especiais do sistema
                 $key_lower = strtolower($key);
                 if (in_array($key_lower, array_map('strtolower', $ignore_fields))) {
                     continue;
@@ -264,8 +278,14 @@ class AcervoX_CSV_Importer {
                         $csv_key_base = explode('|', $csv_key_lower)[0];
                         $csv_key_base = trim($csv_key_base);
                         
+                        // Comparação mais flexível
+                        $label_clean = str_replace([' ', '_', '-', '|', ':', '/', '\\'], '', strtolower($label));
+                        $csv_key_clean = str_replace([' ', '_', '-', '|', ':', '/', '\\'], '', $csv_key_base);
+                        
                         if ($csv_key_base === $label || 
-                            str_replace([' ', '_', '-'], '', $csv_key_base) === str_replace([' ', '_', '-'], '', $label)) {
+                            $csv_key_clean === $label_clean ||
+                            strpos($csv_key_base, $label) !== false ||
+                            strpos($label, $csv_key_base) !== false) {
                             $value = $csv_value;
                             break;
                         }
@@ -284,12 +304,74 @@ class AcervoX_CSV_Importer {
                             $sanitized_value = is_numeric($value) ? $value : '';
                             break;
                         default:
-                            $sanitized_value = sanitize_text_field($value);
+                            // Para campos de texto, permitir valores longos também
+                            $sanitized_value = strlen($value) > 255 ? sanitize_textarea_field($value) : sanitize_text_field($value);
                     }
                     
                     if (!empty($sanitized_value)) {
                         update_post_meta($post_id, '_acervox_' . $key, $sanitized_value);
                     }
+                }
+            }
+        }
+        
+        // Mapear TODOS os campos do CSV que não foram mapeados ainda
+        // Isso garante que nenhum dado seja perdido
+        foreach ($data as $csv_key => $csv_value) {
+            if (empty($csv_value)) {
+                continue;
+            }
+            
+            $csv_key_lower = strtolower(trim($csv_key));
+            $csv_key_base = explode('|', $csv_key_lower)[0];
+            $csv_key_base = trim($csv_key_base);
+            
+            // Ignorar apenas campos especiais
+            $ignore_special = [
+                'special_item_id', 'special_item_status', 'special_document',
+                'special_thumbnail', 'special_attachments', 'special_comment_status',
+                'special_item_author', 'special_item_slug', 'creation_date',
+                'user_last_modified', 'modification_date', 'public_url'
+            ];
+            
+            if (in_array($csv_key_base, array_map('strtolower', $ignore_special))) {
+                continue;
+            }
+            
+            // Verificar se já foi mapeado
+            $already_mapped = false;
+            if (!empty($fields)) {
+                foreach ($fields as $field) {
+                    $field_key = strtolower(str_replace(['-', '_', ' '], '', $field['key'] ?? ''));
+                    $field_label = strtolower(str_replace(['-', '_', ' '], '', $field['label'] ?? ''));
+                    $csv_clean = str_replace(['-', '_', ' '], '', $csv_key_base);
+                    
+                    if ($field_key === $csv_clean || $field_label === $csv_clean) {
+                        $already_mapped = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Se não foi mapeado, criar campo dinamicamente e salvar
+            if (!$already_mapped && !empty($csv_value)) {
+                $dynamic_key = sanitize_title($csv_key_base);
+                $dynamic_key = str_replace(['-', '_'], '', $dynamic_key);
+                
+                // Determinar tipo
+                $dynamic_type = 'text';
+                if (strlen($csv_value) > 200 || 
+                    strpos($csv_key_base, 'descrição') !== false ||
+                    strpos($csv_key_base, 'description') !== false ||
+                    strpos($csv_key_base, 'observação') !== false ||
+                    strpos($csv_key_base, 'historico') !== false) {
+                    $dynamic_type = 'textarea';
+                }
+                
+                // Salvar o valor
+                $sanitized = $dynamic_type === 'textarea' ? sanitize_textarea_field($csv_value) : sanitize_text_field($csv_value);
+                if (!empty($sanitized)) {
+                    update_post_meta($post_id, '_acervox_' . $dynamic_key, $sanitized);
                 }
             }
         }
@@ -495,7 +577,7 @@ class AcervoX_CSV_Importer {
     /**
      * Cria campos de metadados automaticamente baseado nas colunas do CSV
      */
-    private function auto_create_fields_from_csv($sample_data) {
+    private function auto_create_fields_from_csv($sample_data, $existing_fields = []) {
         if (!class_exists('AcervoX_Meta_Registry')) {
             return;
         }
@@ -513,7 +595,17 @@ class AcervoX_CSV_Importer {
             return;
         }
         
-        $fields = [];
+        // Criar mapa de campos existentes por key
+        $existing_keys = [];
+        if (is_array($existing_fields)) {
+            foreach ($existing_fields as $field) {
+                if (isset($field['key'])) {
+                    $existing_keys[strtolower($field['key'])] = $field;
+                }
+            }
+        }
+        
+        $fields = is_array($existing_fields) ? $existing_fields : [];
         $ignore_headers = [
             'special_item_id', 'special_item_status', 'special_document',
             'special_thumbnail', 'special_attachments', 'special_comment_status',
@@ -533,17 +625,29 @@ class AcervoX_CSV_Importer {
                 continue;
             }
             
-            // Ignorar campos de imagem (já processados)
+            // Ignorar apenas campos de imagem (thumbnail, special_thumbnail)
             $field_name_lower = strtolower($field_name);
-            if (strpos($field_name_lower, 'thumbnail') !== false || 
-                strpos($field_name_lower, 'imagem') !== false ||
-                strpos($field_name_lower, 'image') !== false) {
+            if (strpos($field_name_lower, 'special_thumbnail') !== false || 
+                (strpos($field_name_lower, 'thumbnail') !== false && strpos($field_name_lower, 'special') !== false)) {
                 continue;
             }
             
-            // Ignorar campos de título e descrição (já processados)
-            if (in_array($field_name_lower, ['title', 'titulo', 'nome', 'name', 'description', 'descricao', 'excerpt', 'resumo'])) {
-                continue;
+            // NÃO ignorar descrição - ela deve ser um campo de metadado também
+            // Criar chave única baseada no nome
+            $key = sanitize_title($field_name);
+            $key = str_replace(['-', '_'], '', $key);
+            
+            // Verificar se o campo já existe
+            $exists = false;
+            foreach ($fields as $existing_field) {
+                if (isset($existing_field['key']) && $existing_field['key'] === $key) {
+                    $exists = true;
+                    break;
+                }
+            }
+            
+            if ($exists) {
+                continue; // Campo já existe, pular
             }
             
             // Determinar tipo do campo baseado no nome ou conteúdo
@@ -559,7 +663,7 @@ class AcervoX_CSV_Importer {
                 }
             }
             
-            // Verificar se é textarea pelo nome
+            // Verificar se é textarea pelo nome ou pelo tipo no header
             if (strpos($field_name_lower, 'descrição') !== false || 
                 strpos($field_name_lower, 'description') !== false ||
                 strpos($field_name_lower, 'observação') !== false ||
@@ -568,36 +672,34 @@ class AcervoX_CSV_Importer {
                 strpos($field_name_lower, 'historico') !== false ||
                 strpos($field_name_lower, 'dados') !== false ||
                 strpos($field_name_lower, 'referência') !== false ||
-                strpos($field_name_lower, 'referencia') !== false) {
+                strpos($field_name_lower, 'referencia') !== false ||
+                strpos($field_name_lower, 'característica') !== false ||
+                strpos($field_name_lower, 'caracteristica') !== false ||
+                strpos($field_name_lower, 'especificação') !== false ||
+                strpos($field_name_lower, 'especificacao') !== false) {
                 $field_type = 'textarea';
             }
             
-            // Criar chave única baseada no nome
-            $key = sanitize_title($field_name);
-            $key = str_replace(['-', '_'], '', $key);
-            
-            // Verificar se o campo já existe
-            $exists = false;
-            foreach ($fields as $existing_field) {
-                if ($existing_field['key'] === $key) {
-                    $exists = true;
-                    break;
-                }
+            // Verificar se o valor do sample_data é longo (provavelmente textarea)
+            if (isset($sample_data[$header_clean]) && strlen($sample_data[$header_clean]) > 200) {
+                $field_type = 'textarea';
             }
             
-            if (!$exists) {
-                $fields[] = [
-                    'key' => $key,
-                    'label' => $field_name,
-                    'type' => $field_type
-                ];
-            }
+            // Adicionar campo
+            $fields[] = [
+                'key' => $key,
+                'label' => $field_name,
+                'type' => $field_type
+            ];
         }
         
         // Salvar campos na coleção
         if (!empty($fields)) {
             AcervoX_Meta_Registry::save_fields($this->collection_id, $fields);
-            $this->log[] = count($fields) . ' campos de metadados criados automaticamente a partir do CSV';
+            $new_fields_count = count($fields) - count($existing_fields);
+            if ($new_fields_count > 0) {
+                $this->log[] = $new_fields_count . ' novos campos de metadados criados automaticamente a partir do CSV';
+            }
         }
     }
 }

@@ -16,10 +16,15 @@ class AcervoX_Loader {
 
         // Importer
         require_once ACERVOX_PATH . 'includes/importer/logger.php';
+        require_once ACERVOX_PATH . 'includes/importer/history.php';
         require_once ACERVOX_PATH . 'includes/importer/external-mapper.php';
         require_once ACERVOX_PATH . 'includes/importer/external.php';
         require_once ACERVOX_PATH . 'includes/importer/csv.php';
-        require_once ACERVOX_PATH . 'includes/importer/history.php';
+        
+        // Inicializar histórico de importações
+        if (class_exists('AcervoX_Import_History')) {
+            AcervoX_Import_History::init();
+        }
 
         // Metadados
         require_once ACERVOX_PATH . 'includes/meta/registry.php';

@@ -26,17 +26,15 @@ export default function MetadataBuilder() {
 
   useEffect(() => {
     if (selectedCollection) {
-      fetch(`/wp-json/wp/v2/acervox_collection/${selectedCollection}`)
+      // Buscar via nossa API customizada que já retorna os fields
+      fetch(`/wp-json/acervox/v1/collections`)
         .then(res => res.json())
         .then(data => {
-          if (data.meta && data.meta._acervox_fields) {
-            const fieldsData = Array.isArray(data.meta._acervox_fields) 
-              ? data.meta._acervox_fields[0] 
-              : data.meta._acervox_fields;
-            try {
-              const parsed = typeof fieldsData === 'string' ? JSON.parse(fieldsData) : fieldsData;
-              setFields(Array.isArray(parsed) ? parsed : []);
-            } catch {
+          if (data.collections) {
+            const collection = data.collections.find(col => col.id == selectedCollection);
+            if (collection && collection.fields) {
+              setFields(Array.isArray(collection.fields) ? collection.fields : []);
+            } else {
               setFields([]);
             }
           } else {
@@ -44,6 +42,8 @@ export default function MetadataBuilder() {
           }
         })
         .catch(() => setFields([]));
+    } else {
+      setFields([]);
     }
   }, [selectedCollection]);
 
