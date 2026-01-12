@@ -18,6 +18,8 @@ class AcervoX_Loader {
         require_once ACERVOX_PATH . 'includes/importer/logger.php';
         require_once ACERVOX_PATH . 'includes/importer/mapper.php';
         require_once ACERVOX_PATH . 'includes/importer/tainacan.php';
+        require_once ACERVOX_PATH . 'includes/importer/csv.php';
+        require_once ACERVOX_PATH . 'includes/importer/history.php';
 
         // Metadados
         require_once ACERVOX_PATH . 'includes/meta/registry.php';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Database, Download, CheckCircle2, XCircle, AlertCircle, Archive, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
@@ -12,7 +12,7 @@ export default function ImportTainacan() {
   const [loadingCollections, setLoadingCollections] = useState(true);
 
   useEffect(() => {
-    fetch('/wp-json/acervox/v1/tainacan/collections', {
+    fetch('/wp-json/acervox/v1/external/collections', {
       headers: {
         'X-WP-Nonce': AcervoX?.nonce || ''
       }
@@ -25,7 +25,7 @@ export default function ImportTainacan() {
         if (!data.active) {
           setResult({
             success: false,
-            message: 'Tainacan não está ativo ou não foi encontrado',
+            message: 'Sistema externo não está ativo ou não foi encontrado',
             isWarning: true
           });
         }
@@ -33,7 +33,7 @@ export default function ImportTainacan() {
       .catch(() => {
         setResult({
           success: false,
-          message: 'Erro ao verificar Tainacan',
+          message: 'Erro ao verificar sistema externo',
           isWarning: true
         });
       })
@@ -42,7 +42,11 @@ export default function ImportTainacan() {
 
   const importNow = async () => {
     if (!selectedCollection) {
-      alert('Selecione uma coleção');
+      setResult({
+        success: false,
+        message: 'Por favor, selecione uma coleção antes de importar',
+        isWarning: true
+      });
       return;
     }
 
@@ -50,14 +54,14 @@ export default function ImportTainacan() {
     setResult(null);
 
     try {
-      const response = await fetch('/wp-json/acervox/v1/import/tainacan', {
+      const response = await fetch('/wp-json/acervox/v1/import/external', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-WP-Nonce': AcervoX?.nonce || ''
         },
         body: JSON.stringify({
-          tainacan_collection: parseInt(selectedCollection)
+          external_collection: parseInt(selectedCollection)
         })
       });
 
@@ -91,14 +95,14 @@ export default function ImportTainacan() {
   return (
     <>
       <div className="acervox-header">
-        <h1 className="acervox-header-title">Importar do Tainacan</h1>
+        <h1 className="acervox-header-title">Importar de Sistema Externo</h1>
       </div>
       <div className="acervox-content">
         <Card>
           <CardHeader>
             <CardTitle>Importar Coleção</CardTitle>
             <CardDescription>
-              Importe coleções e itens do plugin Tainacan para o AcervoX
+              Importe coleções e itens de sistemas externos de gestão de acervos para o AcervoX
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -109,30 +113,58 @@ export default function ImportTainacan() {
             ) : collections.length > 0 ? (
               <>
                 <div className="acervox-form-group">
-                  <label className="acervox-form-label">Selecione uma coleção do Tainacan</label>
+                  <label className="acervox-form-label">
+                    Coleção <span style={{ color: 'hsl(var(--destructive))' }}>*</span>
+                  </label>
                   <Select
                     value={selectedCollection}
-                    onChange={(e) => setSelectedCollection(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedCollection(e.target.value);
+                      setResult(null);
+                    }}
                     disabled={loading}
+                    style={{
+                      borderColor: !selectedCollection && loading ? 'hsl(var(--destructive))' : 'hsl(var(--border))'
+                    }}
                   >
-                    <option value="">Selecione uma coleção</option>
+                    <option value="">-- Selecione uma coleção --</option>
                     {collections.map(col => (
                       <option key={col.id} value={col.id}>
                         {col.title || col.name || `Coleção #${col.id}`}
                       </option>
                     ))}
                   </Select>
+                  {!selectedCollection && (
+                    <p style={{ marginTop: '8px', fontSize: '13px', color: 'hsl(var(--destructive))', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AlertCircle size={14} />
+                      Selecione uma coleção para continuar
+                    </p>
+                  )}
                 </div>
+
+                {result && result.isWarning && (
+                  <div className="acervox-alert acervox-alert-warning" style={{ marginBottom: '16px' }}>
+                    <AlertCircle size={20} />
+                    <div>
+                      <strong>{result.message}</strong>
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   onClick={importNow}
                   disabled={loading || !selectedCollection}
-                  style={{ marginTop: '16px' }}
+                  style={{ 
+                    marginTop: '16px',
+                    width: '100%',
+                    opacity: (!selectedCollection) ? 0.5 : 1,
+                    cursor: (!selectedCollection) ? 'not-allowed' : 'pointer'
+                  }}
                 >
                   {loading ? (
                     <>
-                      <div className="acervox-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', marginRight: '8px' }}></div>
-                      Importando...
+                      <Loader2 size={16} className="spinning" />
+                      Importando coleção...
                     </>
                   ) : (
                     <>
@@ -146,9 +178,9 @@ export default function ImportTainacan() {
               <div className={`acervox-alert ${result?.isWarning ? 'acervox-alert-warning' : 'acervox-alert-error'}`}>
                 <AlertCircle size={20} />
                 <div>
-                  <strong>Nenhuma coleção Tainacan encontrada</strong>
+                  <strong>Nenhuma coleção externa encontrada</strong>
                   <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>
-                    Verifique se o plugin Tainacan está ativo e possui coleções cadastradas.
+                    Verifique se o sistema externo está ativo e possui coleções cadastradas.
                   </p>
                 </div>
               </div>
@@ -159,26 +191,54 @@ export default function ImportTainacan() {
                 {result.success ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
                 <div style={{ flex: 1 }}>
                   <strong>{result.message}</strong>
+                  {result.success && result.data?.collection_id && (
+                    <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                      <Archive size={16} />
+                      <span>Coleção criada com ID: <strong>{result.data.collection_id}</strong></span>
+                    </div>
+                  )}
                   {result.data?.log && result.data.log.length > 0 && (
                     <details style={{ marginTop: '12px' }}>
-                      <summary style={{ cursor: 'pointer', fontSize: '14px', marginBottom: '8px' }}>
-                        Ver detalhes da importação ({result.data.log.length} itens)
+                      <summary style={{ cursor: 'pointer', fontSize: '14px', marginBottom: '8px', fontWeight: 500 }}>
+                        Ver detalhes da importação ({result.data.log.length} entradas)
                       </summary>
-                      <ul style={{ marginLeft: '20px', fontSize: '13px', lineHeight: '1.8' }}>
-                        {result.data.log.slice(0, 20).map((log, idx) => (
-                          <li key={idx}>{log}</li>
+                      <div style={{
+                        marginTop: '8px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        padding: '12px',
+                        background: 'hsl(var(--muted))',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontFamily: 'monospace',
+                        lineHeight: '1.6'
+                      }}>
+                        {result.data.log.slice(0, 50).map((log, idx) => (
+                          <div key={idx} style={{ marginBottom: '4px' }}>{log}</div>
                         ))}
-                        {result.data.log.length > 20 && (
-                          <li style={{ fontStyle: 'italic', color: 'hsl(var(--muted-foreground))' }}>
-                            ... e mais {result.data.log.length - 20} itens
-                          </li>
+                        {result.data.log.length > 50 && (
+                          <div style={{ fontStyle: 'italic', color: 'hsl(var(--muted-foreground))', marginTop: '8px' }}>
+                            ... e mais {result.data.log.length - 50} entradas
+                          </div>
                         )}
-                      </ul>
+                      </div>
                     </details>
                   )}
                 </div>
               </div>
             )}
+      </CardContent>
+        </Card>
+      </div>
+      <style>{`
+        .spinning {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
           </CardContent>
         </Card>
       </div>

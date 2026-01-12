@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
 
@@ -9,10 +9,21 @@ import Items from './components/Items';
 import MetadataBuilder from './components/MetadataBuilder';
 import Shortcodes from './components/Shortcodes';
 import ImportTainacan from './components/ImportTainacan';
+import ImportCSV from './components/ImportCSV';
+import ImportHistory from './components/ImportHistory';
 import Settings from './components/Settings';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Carregar estado salvo do localStorage
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem('acervox_active_tab');
+    return saved || 'dashboard';
+  });
+
+  // Salvar estado no localStorage quando mudar
+  useEffect(() => {
+    localStorage.setItem('acervox_active_tab', activeTab);
+  }, [activeTab]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -28,6 +39,10 @@ function App() {
         return <Shortcodes />;
       case 'import':
         return <ImportTainacan />;
+      case 'import-csv':
+        return <ImportCSV />;
+      case 'import-history':
+        return <ImportHistory />;
       case 'settings':
         return <Settings />;
       default:

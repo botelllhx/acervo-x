@@ -297,11 +297,9 @@
 
       html += '</div>';
 
-      // Remover container anterior
-      const oldContainer = this.container.querySelector(`.acervox-${layout}`);
-      if (oldContainer) {
-        oldContainer.remove();
-      }
+      // Remover TODOS os containers de layout anteriores (grid, masonry, list)
+      const oldContainers = this.container.querySelectorAll('.acervox-grid, .acervox-masonry, .acervox-list');
+      oldContainers.forEach(container => container.remove());
 
       // Remover loading/empty
       const loading = this.container.querySelector('.acervox-loading');
@@ -348,9 +346,9 @@
               data-full="${this.escapeHtml(item.thumbnails?.full || thumbnail)}"
               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23f0f0f0\' width=\'400\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3ESem imagem%3C/text%3E%3C/svg%3E'"
             />
+            <div class="acervox-item-cover"></div>
             <div class="acervox-item-overlay">
               <div class="acervox-item-overlay-content">
-                <h3>${this.escapeHtml(item.title || '')}</h3>
                 ${item.excerpt ? `<p>${this.escapeHtml(item.excerpt.substring(0, 100))}...</p>` : ''}
               </div>
             </div>

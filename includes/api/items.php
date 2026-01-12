@@ -139,11 +139,45 @@ function acervox_api_get_items_advanced($request) {
             }
         }
 
-        // Metadados da coleção
+        // Metadados padrão (sempre presentes)
+        $meta = [];
+        
+        // Coleção (metadado padrão)
+        if ($collection_id) {
+            $collection_title = get_the_title($collection_id);
+            $meta['collection'] = [
+                'label' => 'Coleção',
+                'type' => 'collection',
+                'value' => $collection_title,
+                'collection_id' => $collection_id,
+                'is_default' => true,
+            ];
+        }
+        
+        // Título (metadado padrão - puxado do título do post)
+        $meta['title'] = [
+            'label' => 'Título',
+            'type' => 'text',
+            'value' => get_the_title(),
+            'is_default' => true,
+        ];
+        
+        // Descrição (metadado padrão)
+        $default_description = get_post_meta($post_id, '_acervox_default_description', true);
+        if (!$default_description) {
+            $default_description = get_the_excerpt();
+        }
+        $meta['description'] = [
+            'label' => 'Descrição',
+            'type' => 'textarea',
+            'value' => $default_description,
+            'is_default' => true,
+        ];
+        
+        // Metadados personalizados da coleção
         if ($collection_id && class_exists('AcervoX_Meta_Registry')) {
             $fields = AcervoX_Meta_Registry::get_fields($collection_id);
             if (!empty($fields) && is_array($fields)) {
-                $meta = [];
                 foreach ($fields as $field) {
                     if (isset($field['key'])) {
                         $value = get_post_meta($post_id, '_acervox_' . $field['key'], true);
@@ -152,14 +186,16 @@ function acervox_api_get_items_advanced($request) {
                                 'label' => $field['label'] ?? $field['key'],
                                 'type' => $field['type'] ?? 'text',
                                 'value' => $value,
+                                'is_default' => false,
                             ];
                         }
                     }
                 }
-                if (!empty($meta)) {
-                    $item['meta'] = $meta;
-                }
             }
+        }
+        
+        if (!empty($meta)) {
+            $item['meta'] = $meta;
         }
 
         $items[] = $item;

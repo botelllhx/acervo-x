@@ -23,3 +23,14 @@ add_action('wp_enqueue_scripts', function () {
         'nonce' => wp_create_nonce('wp_rest'),
     ]);
 });
+
+// Carregar template single para itens
+add_filter('single_template', function($template) {
+    if (is_singular('acervox_item')) {
+        $plugin_template = ACERVOX_PATH . 'templates/single-acervox_item.php';
+        if (file_exists($plugin_template)) {
+            return $plugin_template;
+        }
+    }
+    return $template;
+});

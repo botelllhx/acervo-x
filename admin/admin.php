@@ -9,13 +9,16 @@ class AcervoX_Admin {
   }
 
   public function menu() {
+    // Ícone SVG customizado para o AcervoX
+    $icon_svg = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/><path d="M2 4h20v16H2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>');
+    
     add_menu_page(
       'AcervoX',
       'AcervoX',
       'manage_options',
       'acervox',
       [$this, 'render'],
-      'dashicons-archive',
+      $icon_svg,
       25
     );
   }

@@ -21,50 +21,79 @@ function acervox_render_metabox($post) {
         'order' => 'ASC'
     ]);
     
+    // Metadados padrão
+    $default_description = get_post_meta($post->ID, '_acervox_default_description', true);
+    
     ?>
-    <div style="margin-bottom: 20px;">
-        <label for="acervox_collection" style="display: block; margin-bottom: 8px; font-weight: 600;">
-            Coleção <span style="color: #d63638;">*</span>
-        </label>
-        <select name="acervox_collection" id="acervox_collection" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-            <option value="">-- Selecione uma coleção --</option>
-            <?php foreach ($collections as $collection) : ?>
-                <option value="<?php echo esc_attr($collection->ID); ?>" <?php selected($collection_id, $collection->ID); ?>>
-                    <?php echo esc_html($collection->post_title); ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-        <p class="description" style="margin-top: 8px; font-size: 13px; color: #646970;">
-            Selecione a coleção à qual este item pertence. Os campos de metadados serão atualizados automaticamente.
-        </p>
-        <?php if ($collection_id) : ?>
-            <div style="margin-top: 12px; padding: 10px; background: #d1f4e0; border-left: 4px solid #00a32a; border-radius: 4px;">
-                <strong style="color: #00a32a;">✓ Item vinculado à coleção:</strong>
-                <span style="color: #1e4620;"><?php echo esc_html(get_the_title($collection_id)); ?></span>
-            </div>
-        <?php else : ?>
-            <div style="margin-top: 12px; padding: 10px; background: #fcf0f1; border-left: 4px solid #d63638; border-radius: 4px;">
-                <strong style="color: #d63638;">⚠ Atenção:</strong>
-                <span style="color: #721c24;">Este item não está vinculado a nenhuma coleção.</span>
-            </div>
-        <?php endif; ?>
+    <div style="margin-bottom: 24px; padding: 16px; background: #f0f6fc; border: 1px solid #c3d4e6; border-radius: 6px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #1d2327; text-transform: uppercase; letter-spacing: 0.5px;">
+            📌 Metadados Padrão (Obrigatórios)
+        </h3>
+        
+        <div style="margin-bottom: 16px;">
+            <label for="acervox_collection" style="display: block; margin-bottom: 8px; font-weight: 600; color: #1d2327;">
+                Coleção <span style="color: #d63638;">*</span>
+            </label>
+            <select name="acervox_collection" id="acervox_collection" style="width: 100%; padding: 8px; border: 1px solid #8c8f94; border-radius: 4px; background: white;">
+                <option value="">-- Selecione uma coleção --</option>
+                <?php foreach ($collections as $collection) : ?>
+                    <option value="<?php echo esc_attr($collection->ID); ?>" <?php selected($collection_id, $collection->ID); ?>>
+                        <?php echo esc_html($collection->post_title); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <p class="description" style="margin-top: 8px; font-size: 13px; color: #646970;">
+                A coleção à qual este item pertence. Este é um campo obrigatório e não pode ser removido.
+            </p>
+            <?php if ($collection_id) : ?>
+                <div style="margin-top: 12px; padding: 10px; background: #d1f4e0; border-left: 4px solid #00a32a; border-radius: 4px;">
+                    <strong style="color: #00a32a;">✓ Item vinculado à coleção:</strong>
+                    <span style="color: #1e4620;"><?php echo esc_html(get_the_title($collection_id)); ?></span>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #1d2327;">
+                Título <span style="color: #d63638;">*</span>
+            </label>
+            <input 
+                type="text" 
+                value="<?php echo esc_attr($post->post_title); ?>" 
+                readonly 
+                style="width: 100%; padding: 8px; border: 1px solid #8c8f94; border-radius: 4px; background: #f6f7f7; color: #646970; cursor: not-allowed;"
+            />
+            <p class="description" style="margin-top: 8px; font-size: 13px; color: #646970;">
+                O título do item (puxado automaticamente do título do post). Este campo é obrigatório e não pode ser removido.
+            </p>
+        </div>
+        
+        <div>
+            <label for="acervox_default_description" style="display: block; margin-bottom: 8px; font-weight: 600; color: #1d2327;">
+                Descrição <span style="color: #d63638;">*</span>
+            </label>
+            <textarea 
+                name="acervox_default_description" 
+                id="acervox_default_description" 
+                rows="4" 
+                style="width: 100%; padding: 8px; border: 1px solid #8c8f94; border-radius: 4px; font-family: inherit; resize: vertical;"
+            ><?php echo esc_textarea($default_description); ?></textarea>
+            <p class="description" style="margin-top: 8px; font-size: 13px; color: #646970;">
+                Descrição do item. Este campo é obrigatório e não pode ser removido.
+            </p>
+        </div>
     </div>
     
     <?php
     
     // Renderiza campos dinâmicos se houver coleção associada
     if ($collection_id) {
-        acervox_render_dynamic_fields($post);
-    } else {
-        // Campo padrão se não houver coleção
-        $autor = get_post_meta($post->ID, '_acervox_autor', true);
         ?>
-        <div style="margin-bottom: 20px;">
-            <label for="acervox_autor" style="display: block; margin-bottom: 8px; font-weight: 600;">Autor</label>
-            <input type="text" id="acervox_autor" name="acervox_autor" value="<?php echo esc_attr($autor); ?>" style="width:100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-            <p class="description" style="margin-top: 8px; font-size: 13px; color: #646970;">
-                Este campo só será usado se o item não estiver vinculado a uma coleção.
-            </p>
+        <div style="margin-top: 24px; padding: 16px; background: #fff; border: 1px solid #c3d4e6; border-radius: 6px;">
+            <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #1d2327; text-transform: uppercase; letter-spacing: 0.5px;">
+                ⚙️ Metadados Personalizados
+            </h3>
+            <?php acervox_render_dynamic_fields($post); ?>
         </div>
         <?php
     }
@@ -95,7 +124,7 @@ add_action('save_post', function ($post_id) {
         return;
     }
 
-    // Salvar/atualizar coleção vinculada
+    // Salvar/atualizar coleção vinculada (metadado padrão)
     if (isset($_POST['acervox_collection'])) {
         $new_collection_id = !empty($_POST['acervox_collection']) ? absint($_POST['acervox_collection']) : '';
         
@@ -111,16 +140,13 @@ add_action('save_post', function ($post_id) {
         }
     }
 
+    // Salvar descrição padrão (metadado padrão)
+    if (isset($_POST['acervox_default_description'])) {
+        update_post_meta($post_id, '_acervox_default_description', sanitize_textarea_field($_POST['acervox_default_description']));
+    }
+
     // Obter a coleção atual (após atualização)
     $collection_id = get_post_meta($post_id, '_acervox_collection', true);
-
-    // Salvar campo autor padrão (apenas se não houver coleção)
-    if (!$collection_id && isset($_POST['acervox_autor'])) {
-        update_post_meta($post_id, '_acervox_autor', sanitize_text_field($_POST['acervox_autor']));
-    } elseif ($collection_id) {
-        // Limpar autor se houver coleção
-        delete_post_meta($post_id, '_acervox_autor');
-    }
 
     // Salvar campos dinâmicos da coleção
     if ($collection_id && class_exists('AcervoX_Meta_Registry')) {

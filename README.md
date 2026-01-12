@@ -4,7 +4,7 @@ Framework moderno de gestão de acervos digitais para WordPress.
 
 ## 📋 Descrição
 
-AcervoX é um plugin WordPress completo para gerenciar acervos digitais, especialmente otimizado para coleções de imagens. Com interface moderna estilo v0.dev, design minimalista e funcionalidades avançadas.
+AcervoX é um plugin WordPress completo para gerenciar acervos digitais, especialmente otimizado para coleções de imagens. Com interface moderna e elegante, design minimalista e funcionalidades avançadas.
 
 ## ✨ Características
 
