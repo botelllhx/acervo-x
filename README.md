@@ -511,7 +511,7 @@ GNU General Public License for more details.
 **Mateus Botelho**
 
 - GitHub: [@botelllhx](https://github.com/botelllhx)
-- Email: mateusbotelho9779@exemplo.com
+- Email: mateusbotelho9779@gmail.com
 
 ## 🙏 Agradecimentos
 
