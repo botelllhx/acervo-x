@@ -80,7 +80,7 @@ Ideal para museus, galerias, bibliotecas digitais, arquivos históricos e qualqu
 
 ```bash
 # Clonar repositório
-git clone https://github.com/seu-usuario/acervox.git
+git clone https://github.com/botelllhx/acervo-x.git
 cd acervox
 
 # Instalar dependências do frontend
@@ -336,7 +336,7 @@ acervox/
 
 ```bash
 # 1. Clonar repositório
-git clone https://github.com/seu-usuario/acervox.git
+git clone https://github.com/botelllhx/acervox.git
 cd acervox
 
 # 2. Instalar dependências PHP (se usar Composer)
