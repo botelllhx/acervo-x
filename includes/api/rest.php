@@ -392,17 +392,48 @@ function acervox_import_external($request) {
         AcervoX_Meta_Registry::save_fields($acervox_collection, $fields);
     }
 
-    AcervoX_Tainacan_Importer::import_items($collection_id, $acervox_collection);
+    $start_time = current_time('mysql');
+    
+    $import_result = AcervoX_Tainacan_Importer::import_items($collection_id, $acervox_collection);
 
     $log = [];
     if (class_exists('AcervoX_Import_Logger')) {
         $log = AcervoX_Import_Logger::get();
     }
+    
+    // Contar itens importados
+    $imported_count = 0;
+    $failed_count = 0;
+    foreach ($log as $log_entry) {
+        if (strpos($log_entry, 'importado') !== false || strpos($log_entry, 'criado') !== false) {
+            $imported_count++;
+        } elseif (strpos($log_entry, 'Erro') !== false) {
+            $failed_count++;
+        }
+    }
+    
+    // Salvar no histórico
+    if (class_exists('AcervoX_Import_History')) {
+        AcervoX_Import_History::add([
+            'import_type' => 'external',
+            'collection_id' => $acervox_collection,
+            'total_items' => $imported_count + $failed_count,
+            'imported_items' => $imported_count,
+            'failed_items' => $failed_count,
+            'status' => $import_result ? 'completed' : 'failed',
+            'started_at' => $start_time,
+            'completed_at' => current_time('mysql'),
+            'error_message' => !$import_result ? 'Falha na importação' : null,
+            'log_data' => $log
+        ]);
+    }
 
     return [
         'status' => 'ok',
         'collection_id' => $acervox_collection,
-        'log' => $log
+        'log' => $log,
+        'imported_count' => $imported_count,
+        'failed_count' => $failed_count
     ];
 }
 
@@ -633,11 +664,25 @@ function acervox_api_import_csv($request) {
     $importer = new AcervoX_CSV_Importer($session_data['file'], $session_data['collection_id']);
     $result = $importer->import($offset, $limit);
     
-    // Se terminou, limpar arquivo temporário
+    // Se terminou, limpar arquivo temporário e salvar no histórico
     if ($result['processed'] >= $session_data['total_rows']) {
         @unlink($session_data['file']);
         delete_transient($session_key);
         $result['completed'] = true;
+        
+        // Salvar no histórico
+        if (class_exists('AcervoX_Import_History')) {
+            AcervoX_Import_History::add([
+                'import_type' => 'csv',
+                'collection_id' => $session_data['collection_id'],
+                'total_items' => $session_data['total_rows'],
+                'imported_items' => $result['processed'] - $result['errors'],
+                'failed_items' => $result['errors'],
+                'status' => $result['errors'] > 0 ? 'completed' : 'completed',
+                'completed_at' => current_time('mysql'),
+                'log_data' => array_merge($result['log'] ?? [], $result['errors_list'] ?? [])
+            ]);
+        }
     }
     
     return $result;

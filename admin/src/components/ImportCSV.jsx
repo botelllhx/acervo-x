@@ -3,6 +3,7 @@ import { FileText, Upload, Download, CheckCircle2, XCircle, AlertCircle, Loader2
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
+import { useToast } from './ToastProvider';
 
 export default function ImportCSV() {
   const [collections, setCollections] = useState([]);
@@ -15,6 +16,7 @@ export default function ImportCSV() {
   const [importLog, setImportLog] = useState([]);
   const [errors, setErrors] = useState([]);
   const [completed, setCompleted] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch('/wp-json/acervox/v1/collections')
@@ -136,6 +138,11 @@ export default function ImportCSV() {
           if (data.completed) {
             setCompleted(true);
             setImporting(false);
+            showToast(
+              `Importação concluída! ${data.processed} itens importados com sucesso${data.errors > 0 ? ` (${data.errors} erros)` : ''}`,
+              data.errors > 0 ? 'warning' : 'success',
+              5000
+            );
           } else {
             offset += batchSize;
             setTimeout(importBatch, 500); // Pequeno delay entre lotes
@@ -144,7 +151,7 @@ export default function ImportCSV() {
           throw new Error(data.message || 'Erro na importação');
         }
       } catch (error) {
-        alert('Erro na importação: ' + error.message);
+        showToast('Erro na importação: ' + error.message, 'error', 5000);
         setImporting(false);
       }
     };

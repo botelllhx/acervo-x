@@ -12,6 +12,7 @@ import ImportTainacan from './components/ImportTainacan';
 import ImportCSV from './components/ImportCSV';
 import ImportHistory from './components/ImportHistory';
 import Settings from './components/Settings';
+import { ToastProvider } from './components/ToastProvider';
 
 function App() {
   // Carregar estado salvo do localStorage
@@ -51,11 +52,13 @@ function App() {
   };
 
   return (
-    <div className="acervox-admin">
-      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-        {renderContent()}
-      </Layout>
-    </div>
+    <ToastProvider>
+      <div className="acervox-admin">
+        <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+          {renderContent()}
+        </Layout>
+      </div>
+    </ToastProvider>
   );
 }
 

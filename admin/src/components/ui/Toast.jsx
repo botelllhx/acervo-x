@@ -24,10 +24,6 @@ export function Toast({ message, type = 'success', onClose, duration = 3000 }) {
     <div
       className={`acervox-toast acervox-toast-${type}`}
       style={{
-        position: 'fixed',
-        top: '32px',
-        right: '32px',
-        zIndex: 10000,
         padding: '16px 20px',
         backgroundColor: type === 'success' ? 'hsl(142, 76%, 36%)' : type === 'error' ? 'hsl(0, 84%, 60%)' : type === 'warning' ? 'hsl(38, 92%, 50%)' : 'hsl(217, 91%, 60%)',
         color: 'white',
@@ -38,7 +34,6 @@ export function Toast({ message, type = 'success', onClose, duration = 3000 }) {
         gap: '12px',
         minWidth: '300px',
         maxWidth: '500px',
-        animation: 'slideInRight 0.3s ease-out',
       }}
     >
       <Icon size={20} />

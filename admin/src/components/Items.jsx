@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
-import { useToast } from './ui/Toast';
+import { useToast } from './ToastProvider';
 
 export default function Items() {
   const [items, setItems] = useState([]);
@@ -20,7 +20,7 @@ export default function Items() {
   const [collections, setCollections] = useState([]);
   const [linkingItem, setLinkingItem] = useState(null);
   const [linkingLoading, setLinkingLoading] = useState(null);
-  const { showToast, ToastContainer } = useToast();
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch('/wp-json/acervox/v1/collections')
@@ -172,7 +172,6 @@ export default function Items() {
 
   return (
     <>
-      <ToastContainer />
       <div className="acervox-header">
         <h1 className="acervox-header-title">Itens do Acervo</h1>
       </div>

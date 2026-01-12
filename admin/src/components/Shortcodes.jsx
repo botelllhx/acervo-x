@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useToast } from './ToastProvider';
 
 export default function Shortcodes() {
   const [shortcodes, setShortcodes] = useState([]);
@@ -21,6 +22,7 @@ export default function Shortcodes() {
     show_excerpt: true,
     show_meta: true,
   });
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadShortcodes();
@@ -98,7 +100,13 @@ export default function Shortcodes() {
         'X-WP-Nonce': AcervoX?.nonce || ''
       },
       body: JSON.stringify({ shortcodes: updated })
-    }).catch(console.error);
+    })
+    .then(() => {
+      showToast(editing ? 'Shortcode atualizado com sucesso!' : 'Shortcode criado com sucesso!', 'success');
+    })
+    .catch((error) => {
+      showToast('Erro ao salvar shortcode: ' + error.message, 'error');
+    });
     
     setShowForm(false);
     setEditing(null);
@@ -116,7 +124,10 @@ export default function Shortcodes() {
   };
 
   const deleteShortcode = (id) => {
-    if (confirm('Tem certeza que deseja excluir este shortcode?')) {
+    const shortcode = shortcodes.find(s => s.id === id);
+    const shortcodeName = shortcode ? (shortcode.name || 'este shortcode') : 'este shortcode';
+    
+    if (confirm(`Tem certeza que deseja excluir "${shortcodeName}"?`)) {
       const updated = shortcodes.filter(s => s.id !== id);
       setShortcodes(updated);
       localStorage.setItem('acervox_shortcodes', JSON.stringify(updated));
@@ -129,7 +140,13 @@ export default function Shortcodes() {
           'X-WP-Nonce': AcervoX?.nonce || ''
         },
         body: JSON.stringify({ shortcodes: updated })
-      }).catch(console.error);
+      })
+      .then(() => {
+        showToast(`Shortcode "${shortcodeName}" excluído com sucesso!`, 'success');
+      })
+      .catch((error) => {
+        showToast('Erro ao excluir shortcode: ' + error.message, 'error');
+      });
     }
   };
 
@@ -151,7 +168,7 @@ export default function Shortcodes() {
 
   const copyCode = (code) => {
     navigator.clipboard.writeText(code);
-    alert('Código copiado!');
+    showToast('Código copiado para a área de transferência!', 'success', 2000);
   };
 
   return (

@@ -4,12 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useToast } from './ToastProvider';
 
 export default function MetadataBuilder() {
   const [fields, setFields] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState('');
   const [collections, setCollections] = useState([]);
   const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch('/wp-json/acervox/v1/collections')
@@ -64,7 +66,7 @@ export default function MetadataBuilder() {
 
   const saveFields = async () => {
     if (!selectedCollection) {
-      alert('Selecione uma coleção primeiro');
+      showToast('Por favor, selecione uma coleção primeiro', 'warning');
       return;
     }
 
@@ -84,12 +86,13 @@ export default function MetadataBuilder() {
       });
 
       if (response.ok) {
-        alert('Metadados salvos com sucesso!');
+        showToast('Metadados salvos com sucesso!', 'success');
       } else {
-        alert('Erro ao salvar metadados');
+        const data = await response.json();
+        showToast(data.message || 'Erro ao salvar metadados', 'error');
       }
     } catch (error) {
-      alert('Erro ao salvar: ' + error.message);
+      showToast('Erro ao salvar: ' + error.message, 'error');
     } finally {
       setSaving(false);
     }

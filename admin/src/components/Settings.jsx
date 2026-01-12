@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useToast } from './ToastProvider';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -18,6 +19,7 @@ export default function Settings() {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch('/wp-json/acervox/v1/settings', {
@@ -57,13 +59,15 @@ export default function Settings() {
       
       if (response.ok && data.success) {
         setSaved(true);
+        showToast('Configurações salvas com sucesso!', 'success');
         setTimeout(() => setSaved(false), 3000);
       } else {
-        alert('Erro ao salvar configurações');
+        const errorMsg = data.message || 'Erro ao salvar configurações';
+        showToast(errorMsg, 'error');
       }
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar configurações: ' + error.message);
+      showToast('Erro ao salvar configurações: ' + error.message, 'error');
     } finally {
       setSaving(false);
     }

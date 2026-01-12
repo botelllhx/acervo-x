@@ -3,6 +3,7 @@ import { Database, Download, CheckCircle2, XCircle, AlertCircle, Archive, Loader
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
+import { useToast } from './ToastProvider';
 
 export default function ImportTainacan() {
   const [collections, setCollections] = useState([]);
@@ -10,6 +11,7 @@ export default function ImportTainacan() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [loadingCollections, setLoadingCollections] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch('/wp-json/acervox/v1/external/collections', {
@@ -70,23 +72,32 @@ export default function ImportTainacan() {
       if (response.ok) {
         setResult({
           success: true,
-          message: `Importação concluída com sucesso! ${data.log?.length || 0} itens processados.`,
+          message: `Importação concluída com sucesso! ${data.imported_count || data.log?.length || 0} itens processados.`,
           data: data
         });
         setSelectedCollection('');
+        showToast(
+          `Importação concluída! ${data.imported_count || 0} itens importados${data.failed_count > 0 ? ` (${data.failed_count} falhas)` : ''}`,
+          data.failed_count > 0 ? 'warning' : 'success',
+          5000
+        );
       } else {
+        const errorMsg = data.message || 'Erro na importação';
         setResult({
           success: false,
-          message: data.message || 'Erro na importação',
+          message: errorMsg,
           data: data
         });
+        showToast(errorMsg, 'error', 5000);
       }
     } catch (error) {
+      const errorMsg = 'Erro ao conectar com a API: ' + error.message;
       setResult({
         success: false,
-        message: 'Erro ao conectar com a API',
+        message: errorMsg,
         error: error.message
       });
+      showToast(errorMsg, 'error', 5000);
     } finally {
       setLoading(false);
     }
@@ -197,6 +208,22 @@ export default function ImportTainacan() {
                       <span>Coleção criada com ID: <strong>{result.data.collection_id}</strong></span>
                     </div>
                   )}
+                  {result.success && result.data && (
+                    <div style={{ marginTop: '12px', fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {result.data.imported_count !== undefined && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <CheckCircle2 size={16} style={{ color: 'hsl(142, 76%, 36%)' }} />
+                          <span><strong>{result.data.imported_count}</strong> itens importados com sucesso</span>
+                        </div>
+                      )}
+                      {result.data.failed_count !== undefined && result.data.failed_count > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <XCircle size={16} style={{ color: 'hsl(0, 84%, 60%)' }} />
+                          <span><strong>{result.data.failed_count}</strong> itens falharam</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {result.data?.log && result.data.log.length > 0 && (
                     <details style={{ marginTop: '12px' }}>
                       <summary style={{ cursor: 'pointer', fontSize: '14px', marginBottom: '8px', fontWeight: 500 }}>
@@ -227,7 +254,7 @@ export default function ImportTainacan() {
                 </div>
               </div>
             )}
-      </CardContent>
+          </CardContent>
         </Card>
       </div>
       <style>{`
@@ -239,9 +266,6 @@ export default function ImportTainacan() {
           to { transform: rotate(360deg); }
         }
       `}</style>
-          </CardContent>
-        </Card>
-      </div>
     </>
   );
 }

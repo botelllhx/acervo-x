@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useToast } from './ToastProvider';
 
 export default function Collections() {
   const [collections, setCollections] = useState([]);
@@ -12,6 +13,7 @@ export default function Collections() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadCollections();
@@ -32,7 +34,7 @@ export default function Collections() {
           // Buscar contagem de itens para cada coleção
           const collectionsWithCounts = data.collections.map(col => {
             return fetch(`/wp-json/acervox/v1/items?collection=${col.id}&per_page=1`)
-              .then(res => res.json())
+      .then(res => res.json())
               .then(itemsData => ({
                 ...col,
                 items_count: itemsData.total || 0
@@ -64,17 +66,28 @@ export default function Collections() {
   };
 
   const handleDelete = (id) => {
-    if (confirm('Tem certeza que deseja excluir esta coleção? Todos os itens vinculados serão mantidos, mas perderão a associação com a coleção.')) {
+    const collection = collections.find(c => c.id === id);
+    const collectionName = collection ? collection.title : 'esta coleção';
+    
+    if (confirm(`Tem certeza que deseja excluir "${collectionName}"? Todos os itens vinculados serão mantidos, mas perderão a associação com a coleção.`)) {
       fetch(`/wp-json/wp/v2/acervox_collection/${id}`, {
         method: 'DELETE',
         headers: {
           'X-WP-Nonce': AcervoX?.nonce || ''
         }
       })
-        .then(() => {
-          loadCollections();
+        .then((response) => {
+          if (response.ok) {
+            showToast(`Coleção "${collectionName}" excluída com sucesso`, 'success');
+            loadCollections();
+          } else {
+            showToast('Erro ao excluir coleção', 'error');
+          }
         })
-        .catch(console.error);
+        .catch((error) => {
+          console.error(error);
+          showToast('Erro ao excluir coleção: ' + error.message, 'error');
+        });
     }
   };
 
