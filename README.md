@@ -510,20 +510,19 @@ GNU General Public License for more details.
 
 **Mateus Botelho**
 
-- GitHub: [@seu-usuario](https://github.com/seu-usuario)
-- Email: contato@exemplo.com
+- GitHub: [@botelllhx](https://github.com/botelllhx)
+- Email: mateusbotelho9779@exemplo.com
 
 ## 🙏 Agradecimentos
 
 - WordPress Community
 - React Team
-- shadcn/ui por inspiração no design system
 
 ## 🔗 Links Úteis
 
 - [Documentação Completa](#) (em breve)
-- [Reportar Bug](https://github.com/seu-usuario/acervox/issues)
-- [Solicitar Feature](https://github.com/seu-usuario/acervox/issues)
+- [Reportar Bug](https://github.com/botelllhx/acervox/issues)
+- [Solicitar Feature](https://github.com/botelllhx/acervox/issues)
 - [Changelog Completo](#)
 
 ---
