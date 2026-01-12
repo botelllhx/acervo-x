@@ -24,7 +24,7 @@ Ideal para museus, galerias, bibliotecas digitais, arquivos históricos e qualqu
 ## ✨ Características
 
 ### 🎨 Interface Administrativa Moderna
-- **Dashboard React** com design inspirado em shadcn/ui
+- **Dashboard React** com design moderno e elegante
 - Interface intuitiva e responsiva
 - Feedback visual em tempo real
 - Sistema de notificações (Toast)
