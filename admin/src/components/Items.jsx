@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { FileImage, Search, Filter, ChevronLeft, ChevronRight, Edit, Link2, Unlink, CheckCircle2 } from 'lucide-react';
+import { FileImage, Search, Filter, ChevronLeft, ChevronRight, Edit, Link2, Unlink, CheckCircle2, Image, Copy, Edit3, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useToast } from './ToastProvider';
+import AdvancedSearch from './AdvancedSearch';
+import ItemGallery from './ItemGallery';
+import BulkEdit from './BulkEdit';
 
 export default function Items() {
   const [items, setItems] = useState([]);
@@ -20,6 +23,11 @@ export default function Items() {
   const [collections, setCollections] = useState([]);
   const [linkingItem, setLinkingItem] = useState(null);
   const [linkingLoading, setLinkingLoading] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [showGallery, setShowGallery] = useState(null);
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [duplicatingItem, setDuplicatingItem] = useState(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -170,12 +178,96 @@ export default function Items() {
     }
   };
 
+  const handleDuplicate = async (itemId) => {
+    setDuplicatingItem(itemId);
+    
+    try {
+      const response = await fetch(`/wp-json/acervox/v1/items/${itemId}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-WP-Nonce': AcervoX?.nonce || ''
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showToast('Item duplicado com sucesso!', 'success');
+        await fetchItems(page, search, filters);
+      } else {
+        const errorMessage = data.message || data.error?.message || 'Erro ao duplicar item';
+        showToast(errorMessage, 'error');
+      }
+    } catch (error) {
+      console.error('Erro ao duplicar item', error);
+      showToast('Erro ao duplicar item. Tente novamente.', 'error');
+    } finally {
+      setDuplicatingItem(null);
+    }
+  };
+
+  const toggleItemSelection = (itemId) => {
+    if (selectedItems.includes(itemId)) {
+      setSelectedItems(selectedItems.filter(id => id !== itemId));
+    } else {
+      setSelectedItems([...selectedItems, itemId]);
+    }
+  };
+
+  const handleAdvancedSearch = (searchParams) => {
+    // Implementar busca avançada
+    const params = new URLSearchParams({
+      page: 1,
+      per_page: 12,
+      orderby: filters.orderby,
+      order: filters.order,
+    });
+
+    if (searchParams.search) params.append('search', searchParams.search);
+    if (searchParams.collection) params.append('collection', searchParams.collection);
+    if (searchParams.tags && searchParams.tags.length > 0) {
+      searchParams.tags.forEach(tag => params.append('tags[]', tag));
+    }
+    if (searchParams.categories && searchParams.categories.length > 0) {
+      searchParams.categories.forEach(cat => params.append('categories[]', cat));
+    }
+    if (searchParams.dateFrom) params.append('date_from', searchParams.dateFrom);
+    if (searchParams.dateTo) params.append('date_to', searchParams.dateTo);
+
+    setPage(1);
+    fetchItems(1, searchParams.search || '', { ...filters, collection: searchParams.collection || '' });
+    setShowAdvancedSearch(false);
+  };
+
   return (
     <>
       <div className="acervox-header">
-        <h1 className="acervox-header-title">Itens do Acervo</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <h1 className="acervox-header-title">Itens do Acervo</h1>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {selectedItems.length > 0 && (
+              <Button variant="outline" onClick={() => setShowBulkEdit(true)}>
+                <Edit3 size={16} style={{ marginRight: '8px' }} />
+                Editar {selectedItems.length} Item(ns)
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}>
+              <Filter size={16} style={{ marginRight: '8px' }} />
+              Busca Avançada
+            </Button>
+          </div>
+        </div>
       </div>
       <div className="acervox-content">
+        {/* Busca Avançada */}
+        {showAdvancedSearch && (
+          <AdvancedSearch
+            onSearch={handleAdvancedSearch}
+            collections={collections}
+          />
+        )}
+
         {/* Filtros */}
         <Card style={{ marginBottom: '24px' }}>
           <CardHeader>
@@ -299,9 +391,43 @@ export default function Items() {
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.id)}
+                          onChange={() => toggleItemSelection(item.id)}
+                          style={{ marginRight: '4px' }}
+                        />
+                        <span style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))' }}>
+                          Selecionar
+                        </span>
+                      </div>
                       <Button variant="outline" size="sm" style={{ width: '100%' }} onClick={() => handleEdit(item.id)}>
                         <Edit size={14} />
                         Editar
+                      </Button>
+                      <Button variant="outline" size="sm" style={{ width: '100%' }} onClick={() => setShowGallery(item.id)}>
+                        <Image size={14} />
+                        Galeria
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        style={{ width: '100%' }} 
+                        onClick={() => handleDuplicate(item.id)}
+                        disabled={duplicatingItem === item.id}
+                      >
+                        {duplicatingItem === item.id ? (
+                          <>
+                            <div className="acervox-spinner" style={{ width: '12px', height: '12px', marginRight: '4px' }}></div>
+                            Duplicando...
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            Duplicar
+                          </>
+                        )}
                       </Button>
                       {linkingItem === item.id ? (
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexDirection: 'column' }}>

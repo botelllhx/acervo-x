@@ -30,10 +30,12 @@ class AcervoX_Loader {
         require_once ACERVOX_PATH . 'includes/meta/registry.php';
         require_once ACERVOX_PATH . 'includes/meta/fields.php';
         require_once ACERVOX_PATH . 'includes/meta/metaboxes.php';
+        require_once ACERVOX_PATH . 'includes/meta/gallery.php';
 
         // API REST
         require_once ACERVOX_PATH . 'includes/api/rest.php';
         require_once ACERVOX_PATH . 'includes/api/items.php';
+        require_once ACERVOX_PATH . 'includes/api/export.php';
 
         // Shortcodes
         require_once ACERVOX_PATH . 'includes/shortcode/acervo.php';

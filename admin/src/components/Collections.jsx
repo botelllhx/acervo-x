@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Archive, Plus, Edit, FileImage, Trash2, Search, Filter, Calendar, User, Database, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Archive, Plus, Edit, FileImage, Trash2, Search, Filter, Calendar, User, Database, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useToast } from './ToastProvider';
+import ExportData from './ExportData';
 
 export default function Collections() {
   const [collections, setCollections] = useState([]);
@@ -13,6 +14,7 @@ export default function Collections() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [exportingCollection, setExportingCollection] = useState(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -280,6 +282,15 @@ export default function Collections() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  onClick={() => setExportingCollection(col.id)}
+                                  style={{ padding: '6px' }}
+                                  title="Exportar"
+                                >
+                                  <Download size={16} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={() => handleDelete(col.id)}
                                   style={{ padding: '6px', color: 'hsl(var(--destructive))' }}
                                   title="Excluir"
@@ -322,6 +333,47 @@ export default function Collections() {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de Exportação */}
+        {exportingCollection && (
+          <div 
+            className="acervox-modal-overlay"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              padding: '20px'
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setExportingCollection(null);
+              }
+            }}
+          >
+            <div style={{
+              background: 'hsl(var(--card))',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}>
+              <ExportData
+                collectionId={exportingCollection}
+                onClose={() => setExportingCollection(null)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

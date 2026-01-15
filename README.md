@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)
 ![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue.svg)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 ![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green.svg)
@@ -60,10 +60,15 @@ Ideal para museus, galerias, bibliotecas digitais, arquivos históricos e qualqu
 - Performance otimizada
 
 ### 🔍 Funcionalidades Avançadas
-- API REST completa e documentada
-- Busca e filtros por metadados
-- Taxonomias personalizadas
-- Suporte a múltiplas imagens por item
+- **API REST completa** e documentada
+- **Busca avançada** full-text em todos os metadados
+- **Filtros múltiplos** combinados (AND/OR) por metadados, tags e categorias
+- **Filtros por range de datas** e valores numéricos
+- **Taxonomias personalizadas** (Tags e Categorias hierárquicas)
+- **Galeria de mídia avançada** com múltiplas imagens, vídeos e documentos por item
+- **Exportação de dados** em múltiplos formatos (CSV, JSON, XML)
+- **Edição em massa** de itens
+- **Duplicação de itens** com todos os metadados e mídias
 - Featured images automáticas
 - URLs amigáveis (SEO-friendly)
 
@@ -238,6 +243,41 @@ GET /wp-json/acervox/v1/items?search=termo&collection=1
 GET /wp-json/acervox/v1/items?meta_key=autor&meta_value=Van Gogh
 ```
 
+**Busca Avançada com Filtros Múltiplos:**
+```
+GET /wp-json/acervox/v1/items?search=termo&tags[]=1&tags[]=2&date_from=2020-01-01&date_to=2023-12-31
+```
+
+**Exportar Dados:**
+```
+POST /wp-json/acervox/v1/export/csv
+POST /wp-json/acervox/v1/export/json
+POST /wp-json/acervox/v1/export/xml
+Body: { "collection_id": 1, "item_ids": [] }
+```
+
+**Gerenciar Galeria:**
+```
+GET /wp-json/acervox/v1/items/{id}/gallery
+POST /wp-json/acervox/v1/items/{id}/gallery
+DELETE /wp-json/acervox/v1/items/{id}/gallery/{attachment_id}
+POST /wp-json/acervox/v1/items/{id}/gallery/order
+```
+
+**Tags e Categorias:**
+```
+GET /wp-json/acervox/v1/tags
+GET /wp-json/acervox/v1/categories
+POST /wp-json/acervox/v1/items/{id}/tags
+POST /wp-json/acervox/v1/items/{id}/categories
+```
+
+**Edição em Massa e Duplicação:**
+```
+POST /wp-json/acervox/v1/items/bulk-update
+POST /wp-json/acervox/v1/items/{id}/duplicate
+```
+
 #### Resposta de Exemplo
 
 ```json
@@ -256,6 +296,36 @@ GET /wp-json/acervox/v1/items?meta_key=autor&meta_value=Van Gogh
         "full": "https://..."
       },
       "collection_id": 1,
+      "gallery": [
+        {
+          "id": 456,
+          "type": "image",
+          "url": "https://...",
+          "thumbnails": {
+            "thumbnail": "https://...",
+            "medium": "https://...",
+            "large": "https://...",
+            "full": "https://..."
+          },
+          "order": 0
+        }
+      ],
+      "taxonomies": {
+        "acervox_tag": [
+          {
+            "id": 1,
+            "name": "Arte Moderna",
+            "slug": "arte-moderna"
+          }
+        ],
+        "acervox_category": [
+          {
+            "id": 2,
+            "name": "Pinturas",
+            "slug": "pinturas"
+          }
+        ]
+      },
       "meta": {
         "autor": {
           "label": "Autor",
@@ -283,7 +353,9 @@ acervox/
 │   │   │   ├── Items.jsx
 │   │   │   ├── ImportCSV.jsx
 │   │   │   ├── ImportExternal.jsx
+│   │   │   ├── ImportHistory.jsx
 │   │   │   ├── MetadataBuilder.jsx
+│   │   │   ├── ExportData.jsx
 │   │   │   └── ui/            # Componentes UI reutilizáveis
 │   │   ├── lib/               # Utilitários
 │   │   ├── main.jsx           # Entry point
@@ -294,7 +366,8 @@ acervox/
 ├── includes/                  # Código PHP do plugin
 │   ├── api/                   # API REST
 │   │   ├── items.php
-│   │   └── rest.php
+│   │   ├── rest.php
+│   │   └── export.php
 │   ├── core/                  # Core do plugin
 │   │   ├── activator.php
 │   │   ├── deactivator.php
@@ -308,7 +381,8 @@ acervox/
 │   ├── meta/                  # Sistema de metadados
 │   │   ├── fields.php
 │   │   ├── metaboxes.php
-│   │   └── registry.php
+│   │   ├── registry.php
+│   │   └── gallery.php
 │   ├── post-types/            # Post types customizados
 │   │   ├── collection.php
 │   │   └── item.php
@@ -470,7 +544,18 @@ Contribuições são bem-vindas! Por favor:
 
 ## 📝 Changelog
 
-### 0.2.0 (Atual)
+### 0.3.0 (Atual)
+- ✨ **Exportação de Dados**: Suporte completo a exportação em CSV, JSON e XML
+- ✨ **Galeria de Mídia Avançada**: Sistema completo para múltiplas imagens, vídeos e documentos por item
+- ✨ **Sistema de Tags e Categorias**: API REST completa para gerenciamento de tags e categorias hierárquicas
+- ✨ **Busca Avançada**: Busca full-text em todos os metadados com filtros múltiplos combinados (AND/OR)
+- ✨ **Filtros Avançados**: Filtros por range de datas, valores numéricos, tags e categorias
+- ✨ **Edição em Massa**: Atualização em lote de múltiplos itens simultaneamente
+- ✨ **Duplicação de Itens**: Duplicar itens completos incluindo metadados, galeria e taxonomias
+- 🔧 Melhorias na API REST com novos endpoints para galeria e taxonomias
+- 🔧 Integração de galeria na resposta padrão de itens
+
+### 0.2.0
 - ✨ Importação CSV com mapeamento automático de metadados
 - ✨ Importação automática de imagens de URLs externas
 - ✨ Criação automática de campos de metadados a partir do CSV

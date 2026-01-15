@@ -3,7 +3,7 @@
  * Plugin Name: AcervoX
  * Plugin URI: https://github.com/botelllhx/acervo-x
  * Description: Framework profissional e moderno para gestão de acervos digitais no WordPress. Gerencie coleções, itens, metadados personalizados e exiba seu acervo com layouts elegantes. Suporta importação de dados via CSV e integração com outros sistemas de gestão de acervos.
- * Version: 0.2.0
+ * Version: 0.3.0
  * Author: Mateus Botelho
  * Author URI: https://github.com/botelllhx
  * Text Domain: acervox
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) exit;
 // Constantes do plugin
 define('ACERVOX_PATH', plugin_dir_path(__FILE__));
 define('ACERVOX_URL', plugin_dir_url(__FILE__));
-define('ACERVOX_VERSION', '0.2.0');
+define('ACERVOX_VERSION', '0.3.0');
 define('ACERVOX_DB_VERSION', '1.0');
 
 // Carregar classes de ativação/desativação antes de registrar hooks

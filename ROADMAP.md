@@ -12,14 +12,14 @@
 
 ## 🎯 Funcionalidades Prioritárias
 
-### 1. **Exportação de Dados**
-**Prioridade: Alta** | **Complexidade: Média**
+### ✅ 1. **Exportação de Dados** - **CONCLUÍDO (v0.3.0)**
+**Prioridade: Alta** | **Complexidade: Média** | **Status: ✅ Implementado**
 
-- Exportar coleções e itens para CSV/JSON
-- Exportar com metadados completos
-- Opção de exportar apenas itens selecionados
-- Agendamento de exportações automáticas
-- Suporte a múltiplos formatos (CSV, JSON, XML)
+- ✅ Exportar coleções e itens para CSV/JSON/XML
+- ✅ Exportar com metadados completos
+- ✅ Opção de exportar apenas itens selecionados
+- ⏳ Agendamento de exportações automáticas (futuro)
+- ✅ Suporte a múltiplos formatos (CSV, JSON, XML)
 
 **Benefícios:**
 - Backup de dados
@@ -29,15 +29,15 @@
 
 ---
 
-### 2. **Galeria de Mídia Avançada**
-**Prioridade: Alta** | **Complexidade: Média**
+### ✅ 2. **Galeria de Mídia Avançada** - **CONCLUÍDO (v0.3.0)**
+**Prioridade: Alta** | **Complexidade: Média** | **Status: ✅ Implementado**
 
-- Upload múltiplo de imagens por item
-- Galeria de imagens (não apenas featured image)
-- Suporte a vídeos e documentos
-- Lightbox para visualização
-- Ordenação de mídias por drag-and-drop
-- Legendas e créditos por imagem
+- ✅ Upload múltiplo de imagens por item
+- ✅ Galeria de imagens (não apenas featured image)
+- ✅ Suporte a vídeos e documentos
+- ⏳ Lightbox para visualização (futuro - frontend)
+- ✅ Ordenação de mídias (API pronta)
+- ⏳ Legendas e créditos por imagem (futuro)
 
 **Benefícios:**
 - Itens mais ricos visualmente
@@ -46,14 +46,14 @@
 
 ---
 
-### 3. **Sistema de Tags e Categorias**
-**Prioridade: Alta** | **Complexidade: Baixa**
+### ✅ 3. **Sistema de Tags e Categorias** - **CONCLUÍDO (v0.3.0)**
+**Prioridade: Alta** | **Complexidade: Baixa** | **Status: ✅ Implementado**
 
-- Tags personalizadas por coleção
-- Categorias hierárquicas
-- Filtros por tags no frontend
-- Nuvem de tags
-- Autocomplete ao criar tags
+- ✅ Tags personalizadas (taxonomia acervox_tag)
+- ✅ Categorias hierárquicas (taxonomia acervox_category)
+- ✅ Filtros por tags e categorias na API
+- ⏳ Nuvem de tags no frontend (futuro)
+- ⏳ Autocomplete ao criar tags (futuro - frontend)
 
 **Benefícios:**
 - Melhor organização e descoberta
@@ -62,15 +62,15 @@
 
 ---
 
-### 4. **Busca Avançada e Filtros**
-**Prioridade: Alta** | **Complexidade: Média**
+### ✅ 4. **Busca Avançada e Filtros** - **CONCLUÍDO (v0.3.0)**
+**Prioridade: Alta** | **Complexidade: Média** | **Status: ✅ Implementado**
 
-- Busca full-text em todos os metadados
-- Filtros múltiplos combinados (AND/OR)
-- Filtros por faixa de datas
-- Filtros por valores numéricos (min/max)
-- Salvar filtros como "vistas" reutilizáveis
-- Busca por similaridade de imagens (opcional)
+- ✅ Busca full-text em todos os metadados
+- ✅ Filtros múltiplos combinados (AND/OR)
+- ✅ Filtros por faixa de datas
+- ✅ Filtros por valores numéricos (min/max)
+- ⏳ Salvar filtros como "vistas" reutilizáveis (futuro)
+- ⏳ Busca por similaridade de imagens (futuro - opcional)
 
 **Benefícios:**
 - Encontrar itens rapidamente
@@ -79,14 +79,14 @@
 
 ---
 
-### 5. **Editor Visual de Itens**
-**Prioridade: Média** | **Complexidade: Média**
+### ✅ 5. **Editor Visual de Itens** - **PARCIALMENTE CONCLUÍDO (v0.3.0)**
+**Prioridade: Média** | **Complexidade: Média** | **Status: ✅ Backend Implementado**
 
-- Editor inline no admin React
-- Preview em tempo real
-- Edição em massa de itens
-- Duplicação de itens
-- Histórico de versões (revisões)
+- ⏳ Editor inline no admin React (futuro - frontend)
+- ⏳ Preview em tempo real (futuro - frontend)
+- ✅ Edição em massa de itens (API completa)
+- ✅ Duplicação de itens (API completa)
+- ⏳ Histórico de versões (revisões) (futuro)
 
 **Benefícios:**
 - Produtividade aumentada
@@ -430,15 +430,15 @@
 
 ## 📊 Priorização Sugerida
 
-### Fase 1 (Próximos 2-3 meses)
-1. Exportação de Dados
-2. Galeria de Mídia Avançada
-3. Sistema de Tags e Categorias
-4. Busca Avançada e Filtros
-5. Backup e Restauração
+### ✅ Fase 1 (CONCLUÍDA - v0.3.0)
+1. ✅ Exportação de Dados
+2. ✅ Galeria de Mídia Avançada
+3. ✅ Sistema de Tags e Categorias
+4. ✅ Busca Avançada e Filtros
+5. ⏳ Backup e Restauração (pendente)
 
-### Fase 2 (3-6 meses)
-6. Editor Visual de Itens
+### Fase 2 (Próximos 3-6 meses)
+6. Editor Visual de Itens (Backend ✅, Frontend ⏳)
 7. Dashboard com Analytics
 8. Sistema de Permissões Granulares
 9. Importação de Múltiplos Formatos

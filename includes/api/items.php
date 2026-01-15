@@ -77,23 +77,142 @@ function acervox_api_get_items_advanced($request) {
         ];
     }
 
-    // Busca por texto
+    // Busca avançada por texto (título, conteúdo, excerpt e metadados)
     if ($request->get_param('search')) {
-        $args['s'] = $request->get_param('search');
+        $search_term = $request->get_param('search');
+        
+        // Busca full-text usando WP_Query
+        $args['s'] = $search_term;
+        
+        // Adicionar busca em metadados também
+        if (!isset($args['meta_query'])) {
+            $args['meta_query'] = [];
+        }
+        
+        // Buscar em metadados personalizados
+        $args['meta_query'][] = [
+            'key' => '',
+            'value' => $search_term,
+            'compare' => 'LIKE'
+        ];
+        
+        // Adicionar busca em taxonomias
+        $args['tax_query'] = [
+            'relation' => 'OR',
+            [
+                'taxonomy' => 'acervox_tag',
+                'field' => 'name',
+                'terms' => $search_term,
+                'operator' => 'LIKE'
+            ],
+            [
+                'taxonomy' => 'acervox_category',
+                'field' => 'name',
+                'terms' => $search_term,
+                'operator' => 'LIKE'
+            ]
+        ];
     }
 
-    // Filtro por metadado
-    if ($request->get_param('meta_key') && $request->get_param('meta_value')) {
+    // Filtros múltiplos de metadados
+    $meta_filters = $request->get_param('meta_filters');
+    if ($meta_filters && is_array($meta_filters)) {
+        if (!isset($args['meta_query'])) {
+            $args['meta_query'] = [];
+        }
+        
+        foreach ($meta_filters as $filter) {
+            if (isset($filter['key']) && isset($filter['value'])) {
+                $meta_query = [
+                    'key' => '_acervox_' . sanitize_key($filter['key']),
+                    'value' => sanitize_text_field($filter['value']),
+                    'compare' => isset($filter['compare']) ? sanitize_text_field($filter['compare']) : 'LIKE'
+                ];
+                
+                // Suporte a comparações numéricas
+                if (isset($filter['type']) && $filter['type'] === 'number') {
+                    $meta_query['type'] = 'NUMERIC';
+                    if (isset($filter['min'])) {
+                        $meta_query['value'] = absint($filter['min']);
+                        $meta_query['compare'] = '>=';
+                    } elseif (isset($filter['max'])) {
+                        $meta_query['value'] = absint($filter['max']);
+                        $meta_query['compare'] = '<=';
+                    }
+                }
+                
+                $args['meta_query'][] = $meta_query;
+            }
+        }
+    } elseif ($request->get_param('meta_key') && $request->get_param('meta_value')) {
+        // Compatibilidade com formato antigo
         $args['meta_query'][] = [
             'key' => '_acervox_' . $request->get_param('meta_key'),
             'value' => $request->get_param('meta_value'),
             'compare' => 'LIKE'
         ];
     }
+    
+    // Filtro por tags
+    if ($request->get_param('tags')) {
+        $tags = is_array($request->get_param('tags')) 
+            ? array_map('absint', $request->get_param('tags'))
+            : [absint($request->get_param('tags'))];
+        
+        if (!isset($args['tax_query'])) {
+            $args['tax_query'] = [];
+        }
+        
+        $args['tax_query'][] = [
+            'taxonomy' => 'acervox_tag',
+            'field' => 'term_id',
+            'terms' => $tags,
+            'operator' => 'IN'
+        ];
+    }
+    
+    // Filtro por categorias
+    if ($request->get_param('categories')) {
+        $categories = is_array($request->get_param('categories'))
+            ? array_map('absint', $request->get_param('categories'))
+            : [absint($request->get_param('categories'))];
+        
+        if (!isset($args['tax_query'])) {
+            $args['tax_query'] = [];
+        }
+        
+        $args['tax_query'][] = [
+            'taxonomy' => 'acervox_category',
+            'field' => 'term_id',
+            'terms' => $categories,
+            'operator' => 'IN'
+        ];
+    }
+    
+    // Filtro por data (range)
+    if ($request->get_param('date_from') || $request->get_param('date_to')) {
+        $date_query = [];
+        
+        if ($request->get_param('date_from')) {
+            $date_query['after'] = sanitize_text_field($request->get_param('date_from'));
+        }
+        
+        if ($request->get_param('date_to')) {
+            $date_query['before'] = sanitize_text_field($request->get_param('date_to'));
+        }
+        
+        if (!empty($date_query)) {
+            $args['date_query'] = [$date_query];
+        }
+    }
 
-    // Relacionar meta_query
+    // Relacionar meta_query e tax_query
     if (!empty($args['meta_query']) && count($args['meta_query']) > 1) {
-        $args['meta_query']['relation'] = 'AND';
+        $args['meta_query']['relation'] = $request->get_param('meta_relation') === 'OR' ? 'OR' : 'AND';
+    }
+    
+    if (!empty($args['tax_query']) && count($args['tax_query']) > 1) {
+        $args['tax_query']['relation'] = $request->get_param('tax_relation') === 'OR' ? 'OR' : 'AND';
     }
 
     $query = new WP_Query($args);
@@ -123,6 +242,11 @@ function acervox_api_get_items_advanced($request) {
             'date' => get_the_date('c'),
             'modified' => get_the_modified_date('c'),
         ];
+        
+        // Galeria de mídia
+        if (class_exists('AcervoX_Gallery')) {
+            $item['gallery'] = AcervoX_Gallery::get_formatted_gallery($post_id);
+        }
 
         // Taxonomias
         $taxonomies = get_object_taxonomies('acervox_item');
